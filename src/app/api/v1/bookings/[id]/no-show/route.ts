@@ -24,13 +24,8 @@ export async function POST(_req: NextRequest, { params }: Params) {
       );
     }
 
-    const updated = await updateBookingStatus(
-      params.id,
-      'No_Show',
-      auth.session!.user.id
-    );
-
-    await updateRoomStatus(booking.room_id, 'Available');
+    const updated = await updateBookingStatus(params.id, 'no_show', auth.user!.id);
+    await updateRoomStatus(booking.room_id, 'available');
 
     return NextResponse.json({
       data: {

@@ -9,6 +9,15 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/modules/auth/infrastructure/supabase';
 import type { Room, RoomPhoto, CreateRoomInput } from '@/shared/types/domain';
 
+// ── DB → Domain mapping ───────────────────────────────────────
+// The DB column is 'status' but the domain type uses 'room_status'.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapRoomStatus(row: any): any {
+  if (!row) return row;
+  const { status, ...rest } = row;
+  return { ...rest, room_status: status ?? rest.room_status };
+}
+
 // ── Room CRUD ─────────────────────────────────────────────────
 
 /**
@@ -25,7 +34,8 @@ export async function listActiveRooms(withPhotos = true): Promise<Room[]> {
 
   const { data, error } = await query;
   if (error) throw new Error(`listActiveRooms: ${error.message}`);
-  return (data ?? []) as Room[];
+  // Map DB column 'status' → domain field 'room_status'
+  return ((data ?? []) as any[]).map(mapRoomStatus) as Room[];
 }
 
 /**
@@ -45,7 +55,7 @@ export async function getRoomById(id: string, includeInactive = false): Promise<
 
   const { data, error } = await query.single();
   if (error) return null;
-  return data as Room;
+  return mapRoomStatus(data as any) as Room;
 }
 
 /**
@@ -68,7 +78,7 @@ export async function getRoomWithCurrentBooking(id: string) {
       )
     `)
     .eq('id', id)
-    .eq('bookings.booking_status', 'Checked_In')
+    .eq('bookings.booking_status', 'checked_in')
     .lte('bookings.check_in_date', today)
     .gte('bookings.check_out_date', today)
     .maybeSingle();
@@ -91,7 +101,7 @@ export async function createRoom(input: CreateRoomInput): Promise<Room> {
       floor:                input.floor,
       description:          input.description.trim(),
       base_price_per_night: input.base_price_per_night,
-      room_status:          'Available',
+      status:               'available',
       is_active:            true,
     })
     .select()
@@ -103,7 +113,7 @@ export async function createRoom(input: CreateRoomInput): Promise<Room> {
     }
     throw new Error(`createRoom: ${error.message}`);
   }
-  return data as Room;
+  return mapRoomStatus(data) as Room;
 }
 
 /**
@@ -124,7 +134,7 @@ export async function updateRoom(
     .single();
 
   if (error) throw new Error(`updateRoom: ${error.message}`);
-  return data as Room;
+  return mapRoomStatus(data) as Room;
 }
 
 /**
@@ -153,7 +163,7 @@ export async function listFutureBookingsForRoom(roomId: string) {
     .select('id, booking_reference, guest_name, check_in_date, check_out_date, booking_status')
     .eq('room_id', roomId)
     .gte('check_in_date', today)
-    .not('booking_status', 'in', '("Cancelled_Full_Refund","Cancelled_Partial_Refund","Cancelled_No_Refund","No_Show")')
+    .not('booking_status', 'in', '("cancelled_full_refund","cancelled_partial_refund","cancelled_no_refund","no_show")')
     .order('check_in_date', { ascending: true });
 
   if (error) throw new Error(`listFutureBookingsForRoom: ${error.message}`);
@@ -210,7 +220,7 @@ export async function deleteRoomPhoto(photoId: string): Promise<void> {
 
 // ── Room Status Updates ───────────────────────────────────────
 
-export type RoomStatusValue = 'Available' | 'Occupied' | 'Reserved_Paid' | 'Reserved_Unpaid';
+export type RoomStatusValue = 'available' | 'occupied' | 'reserved_paid' | 'reserved_unpaid';
 
 /**
  * Updates a room's operational status.
@@ -220,7 +230,7 @@ export async function updateRoomStatus(roomId: string, status: RoomStatusValue):
   const supabase = createSupabaseServiceClient();
   const { error } = await supabase
     .from('rooms')
-    .update({ room_status: status, updated_at: new Date().toISOString() })
+    .update({ status: status, updated_at: new Date().toISOString() })
     .eq('id', roomId);
 
   if (error) throw new Error(`updateRoomStatus: ${error.message}`);

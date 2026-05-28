@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       .select('check_in_date, check_out_date, booking_status')
       .gte('check_in_date', startDate.toISOString().slice(0, 10))
       .lte('check_out_date', endDate.toISOString().slice(0, 10))
-      .in('booking_status', ['Paid', 'Checked_In', 'Checked_Out']);
+      .in('booking_status', ['paid', 'checked_in', 'checked_out']);
 
     // Calculate daily occupancy
     const dailyData: Record<string, { occupied: number; rate: number }> = {};

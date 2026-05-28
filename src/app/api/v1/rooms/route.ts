@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     const room = await createRoom({ room_number, room_type, floor, description: description ?? '', base_price_per_night });
 
     await writeAuditLog({
-      actor:       auth.session!.user.id,
+      actor:       auth.user!.id,
       action_type: AuditActionType.RoomCreated,
       entity_type: EntityType.Room,
       entity_id:   room.id,

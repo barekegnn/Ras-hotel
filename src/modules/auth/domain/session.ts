@@ -3,40 +3,42 @@
 // src/modules/auth/domain/session.ts
 //
 // Server-side helpers for authentication and role-based access control.
+// Uses getUser() (not getSession()) to authenticate via Supabase Auth server.
 // Requirements 11.1, 11.3, 11.5
 // ============================================================
 
 import { createSupabaseServerClient } from '../infrastructure/supabase';
 import type { UserRole } from '@/shared/types/domain';
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
-// ── Session Helpers ───────────────────────────────────────────
+// ── Auth User Helper ──────────────────────────────────────────
 
 /**
- * Retrieves the current authenticated session from the request cookies.
+ * Returns the authenticated user by contacting the Supabase Auth server.
+ * Uses getUser() — NOT getSession() — to prevent cookie-spoofing attacks.
  * Returns null if no valid session exists.
  */
-export async function getSession() {
+export async function getAuthUser() {
   const supabase = createSupabaseServerClient();
-  const { data: { session }, error } = await supabase.auth.getSession();
-  if (error || !session) return null;
-  return session;
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return null;
+  return user;
 }
 
 /**
  * Returns the role of the currently authenticated user.
- * Reads from the `staff_accounts` table using the session's user ID.
+ * Reads from the `staff_accounts` table using the verified user ID.
  * Returns null if the user is not authenticated or has no staff record.
  */
 export async function getUserRole(): Promise<UserRole | null> {
-  const session = await getSession();
-  if (!session) return null;
+  const user = await getAuthUser();
+  if (!user) return null;
 
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from('staff_accounts')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('auth_id', user.id)
     .eq('is_active', true)
     .single();
 
@@ -49,14 +51,14 @@ export async function getUserRole(): Promise<UserRole | null> {
  * Returns null if not authenticated or account is inactive.
  */
 export async function getCurrentStaffAccount() {
-  const session = await getSession();
-  if (!session) return null;
+  const user = await getAuthUser();
+  if (!user) return null;
 
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from('staff_accounts')
     .select('*')
-    .eq('id', session.user.id)
+    .eq('auth_id', user.id)
     .eq('is_active', true)
     .single();
 
@@ -68,18 +70,18 @@ export async function getCurrentStaffAccount() {
 
 /**
  * Requires an authenticated session in an API route.
- * Returns the session if valid, or a 401 NextResponse.
+ * Returns the user + role if valid, or a 401/403 NextResponse.
  */
 export async function requireAuth(
   minRole?: UserRole
 ): Promise<
-  | { session: Awaited<ReturnType<typeof getSession>>; role: UserRole; error: null }
-  | { session: null; role: null; error: NextResponse }
+  | { user: NonNullable<Awaited<ReturnType<typeof getAuthUser>>>; role: UserRole; error: null }
+  | { user: null; role: null; error: NextResponse }
 > {
-  const session = await getSession();
-  if (!session) {
+  const user = await getAuthUser();
+  if (!user) {
     return {
-      session: null,
+      user: null,
       role: null,
       error: NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
@@ -91,7 +93,7 @@ export async function requireAuth(
   const role = await getUserRole();
   if (!role) {
     return {
-      session: null,
+      user: null,
       role: null,
       error: NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Staff account not found or inactive' } },
@@ -100,9 +102,10 @@ export async function requireAuth(
     };
   }
 
+  // 'manager' minRole requires manager; 'receptionist' allows any staff
   if (minRole === 'manager' && role !== 'manager') {
     return {
-      session: null,
+      user: null,
       role: null,
       error: NextResponse.json(
         { error: { code: 'FORBIDDEN', message: 'Manager role required' } },
@@ -111,7 +114,7 @@ export async function requireAuth(
     };
   }
 
-  return { session, role, error: null };
+  return { user, role, error: null };
 }
 
 /**

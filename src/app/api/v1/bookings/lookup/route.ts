@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       pdf_download_url:  ticket?.storage_url ?? null,
       check_in_instructions: checkInInstructions,
       // For Reserved_Unpaid: show outstanding amount (Req 30.6)
-      outstanding_amount: booking.booking_status === 'Reserved_Unpaid' ? booking.total_amount : null,
+      outstanding_amount: booking.booking_status === 'reserved_unpaid' ? booking.total_amount : null,
       hotel_contact: configMap.hotel_phone ?? '',
     };
 

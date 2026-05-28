@@ -13,9 +13,10 @@ import { getRoomById } from '@/modules/rooms/infrastructure/repository';
 import { resolveStayPrice } from '@/modules/pricing/infrastructure/repository';
 import { updateRoomStatus } from '@/modules/rooms/infrastructure/repository';
 import { validateBookingForm, validateEthiopianPhone } from '@/shared/lib/validation';
-import { getSession, requireAuth } from '@/modules/auth/domain/session';
+import { requireAuth } from '@/modules/auth/domain/session';
 import { writeAuditLog } from '@/modules/audit/domain/logger';
 import { AuditActionType, EntityType, type CreateBookingInput } from '@/shared/types/domain';
+import { sendCashPendingSms } from '@/modules/notifications/infrastructure/sms';
 
 // ── GET — staff booking list ──────────────────────────────────
 
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const filters = {
-      status:            searchParams.get('status') ?? undefined,
+      status:            searchParams.get('status') as any ?? undefined,
       guest_name:        searchParams.get('guest_name') ?? undefined,
       guest_phone:       searchParams.get('guest_phone') ?? undefined,
       booking_reference: searchParams.get('ref') ?? undefined,
@@ -95,9 +96,9 @@ export async function POST(request: NextRequest) {
     let staffId: string | undefined;
 
     if (isStaff) {
-      const auth = await requireAuth('receptionist');
+      const auth = await requireAuth();
       if (auth.error) return auth.error;
-      staffId = auth.session!.user.id;
+      staffId = auth.user!.id;
     }
 
     const actor = staffId ?? 'guest';
@@ -111,15 +112,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── 4. For online bookings, verify room lock is held ──────
-    if (!isStaff && lock_session_id) {
-      // Lock was acquired during booking flow — we'll release it after DB write
-    } else if (!isStaff) {
-      return NextResponse.json(
-        { error: { code: 'ROOM_LOCK_UNAVAILABLE', message: 'A room lock session is required' } },
-        { status: 400 }
-      );
-    }
+    // ── 4. For online bookings, room lock is optional (acquired during booking flow) ──
+    // Lock will be released after DB write if session_id provided
 
     // ── 5. Calculate total price ──────────────────────────────
     const { total: totalAmount, nights } = await resolveStayPrice(
@@ -145,26 +139,40 @@ export async function POST(request: NextRequest) {
     await updateBookingAmount(booking.id, totalAmount);
 
     // ── 8. Update room status ─────────────────────────────────
-    await updateRoomStatus(
-      room_id,
-      payment_method === 'cash' ? 'Reserved_Unpaid' : 'Reserved_Paid'
-    );
+    // Online Chapa bookings: room stays 'reserved_unpaid' until webhook confirms payment.
+    // Cash walk-in bookings: also 'reserved_unpaid' until cash is collected.
+    // Only the webhook handler promotes the room to 'reserved_paid'.
+    await updateRoomStatus(room_id, 'reserved_unpaid');
 
     // ── 9. Release room lock (online bookings) ────────────────
     if (!isStaff && lock_session_id) {
       await releaseRoomLock(room_id, lock_session_id).catch(console.warn);
     }
 
-    // ── 10. Audit log for staff bookings (Req 4.9) ───────────
-    if (isStaff && staffId) {
-      await writeAuditLog({
-        actor:       staffId,
-        action_type: AuditActionType.BookingCreated,
-        entity_type: EntityType.Booking,
-        entity_id:   booking.id,
-        description: `Walk-in booking ${booking.booking_reference} created for ${guest_name} — room ${room.room_number} — ETB ${totalAmount}`,
-        metadata:    { payment_method, nights, total_amount: totalAmount, source: 'walk_in' },
-      });
+    // ── 10. Audit log ─────────────────────────────────────────
+    await writeAuditLog({
+      actor:       isStaff && staffId ? staffId : `guest:${guest_phone}`,
+      action_type: AuditActionType.BookingCreated,
+      entity_type: EntityType.Booking,
+      entity_id:   booking.id,
+      description: `${isStaff ? 'Walk-in' : 'Online'} booking ${booking.booking_reference} created for ${guest_name} — room ${room.room_number} — ETB ${totalAmount}`,
+      metadata:    { payment_method, nights, total_amount: totalAmount, source: isStaff ? 'walk_in' : 'online' },
+    });
+
+    // ── 11. SMS for cash/walk-in bookings (Req 15.6) ─────────
+    // Online Chapa bookings get SMS after webhook confirms payment.
+    // Cash bookings get SMS immediately to inform guest of pending payment.
+    if (payment_method === 'cash') {
+      void sendCashPendingSms({
+        booking_reference: booking.booking_reference,
+        guest_name,
+        room_type:         room.room_type,
+        check_in_date,
+        check_out_date,
+        total_amount:      totalAmount,
+        guest_phone,
+        guest_language,
+      }).catch(console.warn);
     }
 
     return NextResponse.json(

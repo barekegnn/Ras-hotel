@@ -13,20 +13,20 @@ import Link from 'next/link';
 import type { Booking } from '@/shared/types/domain';
 
 export default function DeparturesPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [actingOn, setActingOn] = useState<string | null>(null);
-  const [confirmPayment, setConfirmPayment] = useState<string | null>(null);
+  const [bookings,        setBookings]        = useState<Booking[]>([]);
+  const [loading,         setLoading]         = useState(true);
+  const [actingOn,        setActingOn]        = useState<string | null>(null);
+  const [confirmPayment,  setConfirmPayment]  = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const res  = await fetch(`/api/v1/bookings?check_in_from=${today}&check_in_to=${today}&per_page=100`);
-      const json = await res.json();
+      const res   = await fetch(`/api/v1/bookings?check_in_from=${today}&check_in_to=${today}&per_page=100`);
+      const json  = await res.json();
       const departures = ((json.data ?? []) as Booking[])
-        .filter((b) => b.booking_status === 'Checked_In' || b.booking_status === 'Paid')
-        .sort((a, b) => (a.booking_status === 'Checked_In' ? -1 : 1));
+        .filter((b) => b.booking_status === 'checked_in' || b.booking_status === 'paid')
+        .sort((a) => (a.booking_status === 'checked_in' ? -1 : 1));
       setBookings(departures);
     } finally { setLoading(false); }
   }, []);
@@ -36,28 +36,23 @@ export default function DeparturesPage() {
   async function handleCheckout(bookingId: string, forceConfirm = false) {
     setActingOn(bookingId);
     try {
-      const res = await fetch(`/api/v1/bookings/${bookingId}/checkout`, {
-        method: 'POST',
+      const res  = await fetch(`/api/v1/bookings/${bookingId}/checkout`, {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm_payment_collected: forceConfirm }),
+        body:    JSON.stringify({ confirm_payment_collected: forceConfirm }),
       });
       const json = await res.json();
-
       if (res.status === 409 && json.error?.code === 'PAYMENT_OUTSTANDING') {
         setConfirmPayment(bookingId);
         return;
       }
-      if (res.ok) {
-        setConfirmPayment(null);
-        load();
-      } else {
-        alert(json.error?.message ?? 'Check-out failed');
-      }
+      if (res.ok) { setConfirmPayment(null); load(); }
+      else alert(json.error?.message ?? 'Check-out failed');
     } finally { setActingOn(null); }
   }
 
-  const checkedIn = bookings.filter((b) => b.booking_status === 'Checked_In').length;
-  const expected  = bookings.filter((b) => b.booking_status === 'Paid').length;
+  const checkedIn = bookings.filter((b) => b.booking_status === 'checked_in').length;
+  const expected  = bookings.filter((b) => b.booking_status === 'paid').length;
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -88,9 +83,7 @@ export default function DeparturesPage() {
             </p>
             <div className="flex gap-3 pt-2">
               <button onClick={() => setConfirmPayment(null)} className="btn-secondary flex-1">Cancel</button>
-              <button
-                onClick={() => { handleCheckout(confirmPayment, true); }}
-                className="btn-primary flex-1">
+              <button onClick={() => handleCheckout(confirmPayment, true)} className="btn-primary flex-1">
                 Payment collected — check out
               </button>
             </div>
@@ -125,7 +118,7 @@ export default function DeparturesPage() {
         ) : (
           <div className="divide-y divide-gray-100">
             {bookings.map((booking) => {
-              const isCheckedIn = booking.booking_status === 'Checked_In';
+              const isCheckedIn = booking.booking_status === 'checked_in';
               const isActing    = actingOn === booking.id;
               return (
                 <div key={booking.id}
@@ -143,16 +136,14 @@ export default function DeparturesPage() {
                     </div>
                   </div>
 
-                  <BookingStatusBadge status={booking.booking_status as any} />
+                  <BookingStatusBadge status={booking.booking_status} />
 
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Link href={`/dashboard/bookings/${booking.id}`} className="btn-ghost text-xs">
                       Details
                     </Link>
                     {isCheckedIn && (
-                      <button
-                        onClick={() => handleCheckout(booking.id)}
-                        disabled={isActing}
+                      <button onClick={() => handleCheckout(booking.id)} disabled={isActing}
                         className="btn-primary text-xs">
                         {isActing ? (
                           <span className="flex items-center gap-1.5">

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('shift_notes')
-      .select('*, staff_accounts(full_name)')
+      .select('*, staff_accounts!shift_notes_author_id_fkey(full_name)')
       .order('created_at', { ascending: false })
       .limit(perPage);
 
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('shift_notes')
       .insert({
-        staff_id: staff.id,
+        author_id: staff.id,
         note_text: note_text.trim(),
         is_urgent: !!is_urgent,
       })

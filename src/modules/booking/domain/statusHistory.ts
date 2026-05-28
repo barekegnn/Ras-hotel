@@ -14,13 +14,13 @@ import { AuditActionType, EntityType, type BookingStatus } from '@/shared/types/
 // Map booking status transitions to audit action types
 function transitionToActionType(newStatus: BookingStatus): AuditActionType {
   switch (newStatus) {
-    case 'Checked_In':               return AuditActionType.CheckIn;
-    case 'Checked_Out':              return AuditActionType.CheckOut;
-    case 'No_Show':                  return AuditActionType.NoShowMarked;
-    case 'Cancelled_Full_Refund':
-    case 'Cancelled_Partial_Refund':
-    case 'Cancelled_No_Refund':      return AuditActionType.BookingCancelled;
-    case 'Paid':                     return AuditActionType.CashCollectionEvent;
+    case 'checked_in':               return AuditActionType.CheckIn;
+    case 'checked_out':              return AuditActionType.CheckOut;
+    case 'no_show':                  return AuditActionType.NoShowMarked;
+    case 'cancelled_full_refund':
+    case 'cancelled_partial_refund':
+    case 'cancelled_no_refund':      return AuditActionType.BookingCancelled;
+    case 'paid':                     return AuditActionType.CashCollectionEvent;
     default:                         return AuditActionType.BookingModified;
   }
 }

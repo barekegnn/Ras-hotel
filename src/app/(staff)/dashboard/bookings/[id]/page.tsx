@@ -21,26 +21,16 @@ import type { Booking } from '@/shared/types/domain';
 
 interface ExtendedBooking extends Booking {
   room_number?: string;
-  room_type?: string;
+  room_type?:   string;
   room_photos?: Array<{ storage_url: string }>;
 }
 
 interface StatusHistory {
-  booking_id: string;
-  previous_status: string | null;
-  new_status: string;
-  actor: string;
-  transitioned_at: string;
-}
-
-function MailIcon({ className = 'h-5 w-5' }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2"/>
-      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-    </svg>
-  );
+  booking_id:       string;
+  previous_status:  string | null;
+  new_status:       string;
+  actor:            string;
+  transitioned_at:  string;
 }
 
 export default function BookingDetailPage({ params }: { params: { id: string } }) {
@@ -57,6 +47,7 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
   // Modals
   const [showCashModal,   setShowCashModal]   = useState(action === 'cash');
   const [showExtendModal, setShowExtendModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [cashAmount,      setCashAmount]      = useState('');
   const [newCheckOut,     setNewCheckOut]     = useState('');
   const [extendPreview,   setExtendPreview]   = useState<any>(null);
@@ -167,8 +158,26 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
     }
   }
 
-  if (loading) {
-    return (
+  // Cancel booking
+  async function handleCancel() {
+    if (!booking) return;
+    setModalLoading(true);
+    setModalError(null);
+    try {
+      const res = await fetch(`/api/v1/bookings/${booking.id}/cancel`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) {
+        setModalError(json.error?.message ?? 'Cancellation failed');
+        return;
+      }
+      setShowCancelModal(false);
+      await load();
+    } finally {
+      setModalLoading(false);
+    }
+  }
+
+  if (loading) {    return (
       <div className="max-w-4xl space-y-6">
         <div className="skeleton h-10 w-48 rounded-lg" />
         <div className="space-y-3">
@@ -192,9 +201,11 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
     );
   }
 
-  const isCheckedIn = booking.booking_status === 'Checked_In';
-  const isPaid = booking.booking_status === 'Paid';
-  const isUnpaid = booking.booking_status === 'Reserved_Unpaid';
+  const isCheckedIn   = booking.booking_status === 'checked_in';
+  const isPaid        = booking.booking_status === 'paid';
+  const isUnpaid      = booking.booking_status === 'reserved_unpaid';
+  const isCancellable = ['reserved_unpaid', 'paid', 'checked_in'].includes(booking.booking_status);
+  const isTerminal    = ['cancelled_full_refund', 'cancelled_partial_refund', 'cancelled_no_refund', 'no_show', 'checked_out'].includes(booking.booking_status);
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -278,8 +289,18 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
               </button>
             )}
 
+            {/* Cancel booking */}
+            {isCancellable && (
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800 hover:bg-red-100 transition-colors">
+                <AlertIcon className="h-4 w-4" />
+                Cancel booking
+              </button>
+            )}
+
             {/* Print/download ticket */}
-            {!['Cancelled_Full_Refund', 'Cancelled_Partial_Refund', 'Cancelled_No_Refund', 'No_Show'].includes(booking.booking_status) && (
+            {!['cancelled_full_refund', 'cancelled_partial_refund', 'cancelled_no_refund', 'no_show'].includes(booking.booking_status) && (
               <a
                 href={`/api/v1/bookings/${booking.id}/ticket/pdf`}
                 className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
@@ -461,6 +482,44 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
                 disabled={modalLoading}
                 className="btn-primary flex-1">
                 {modalLoading ? 'Processing…' : extendPreview ? 'Confirm extension' : 'Preview'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel booking modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">Cancel booking</h3>
+            <div className="rounded-lg bg-red-50 border border-red-200 p-4 space-y-2">
+              <p className="text-sm font-semibold text-red-900">
+                {booking.booking_reference} — {booking.guest_name}
+              </p>
+              <p className="text-xs text-red-700">
+                The refund tier will be calculated automatically based on the hotel&apos;s
+                cancellation policy and the time remaining before check-in.
+              </p>
+            </div>
+            <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-xs text-gray-600 space-y-1">
+              <p><span className="font-semibold">Full refund</span> — more than 48 h before check-in</p>
+              <p><span className="font-semibold">50% refund</span> — within 48 h of check-in</p>
+              <p><span className="font-semibold">No refund</span> — on check-in day or after</p>
+            </div>
+            {modalError && <p className="text-sm text-red-600">{modalError}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowCancelModal(false); setModalError(null); }}
+                className="btn-secondary flex-1">
+                Keep booking
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={modalLoading}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white
+                           hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                {modalLoading ? 'Cancelling…' : 'Confirm cancellation'}
               </button>
             </div>
           </div>

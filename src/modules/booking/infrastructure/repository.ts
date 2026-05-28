@@ -46,9 +46,8 @@ export async function createBooking(
 
   // 2. Generate unique reference (DB UNIQUE constraint is the final guard)
   const booking_reference = generateBookingReference();
-  const initialStatus: BookingStatus =
-    input.payment_method === 'cash' ? 'Reserved_Unpaid' : 'Reserved_Unpaid';
-  // Online bookings start as Reserved_Unpaid until payment webhook confirms
+  const initialStatus: BookingStatus = 'reserved_unpaid';
+  // Online bookings start as reserved_unpaid until payment webhook confirms
 
   const { data, error } = await supabase
     .from('bookings')
@@ -162,8 +161,8 @@ export async function getTodaysArrivals(): Promise<Booking[]> {
     .from('bookings')
     .select('*')
     .eq('check_in_date', today)
-    .not('booking_status', 'in', '("Cancelled_Full_Refund","Cancelled_Partial_Refund","Cancelled_No_Refund","No_Show","Checked_Out")')
-    .order('booking_status', { ascending: true }); // Paid first
+    .not('booking_status', 'in', '("cancelled_full_refund","cancelled_partial_refund","cancelled_no_refund","no_show","checked_out")')
+    .order('booking_status', { ascending: true }); // paid first
   if (error) throw new Error(`getTodaysArrivals: ${error.message}`);
   return (data ?? []) as Booking[];
 }
@@ -175,8 +174,8 @@ export async function getTodaysDepartures(): Promise<Booking[]> {
     .from('bookings')
     .select('*')
     .eq('check_out_date', today)
-    .in('booking_status', ['Checked_In', 'Paid'])
-    .order('booking_status', { ascending: false }); // Checked_In first
+    .in('booking_status', ['checked_in', 'paid'])
+    .order('booking_status', { ascending: false }); // checked_in first
   if (error) throw new Error(`getTodaysDepartures: ${error.message}`);
   return (data ?? []) as Booking[];
 }
@@ -291,7 +290,8 @@ export async function updateBookingDates(
 }
 
 export async function getBookingStatusHistory(bookingId: string) {
-  const supabase = createSupabaseServerClient();
+  // Use service client to avoid RLS recursive policy stack depth errors
+  const supabase = createSupabaseServiceClient();
   const { data, error } = await supabase
     .from('booking_status_history')
     .select('*')

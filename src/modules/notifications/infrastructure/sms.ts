@@ -2,201 +2,380 @@
 // SMS Notification Service
 // src/modules/notifications/infrastructure/sms.ts
 //
-// Sends SMS notifications via Africa's Talking.
-// Requirements 24.1–24.6
+// Sends SMS via Africa's Talking with 2-attempt retry.
+// Multilingual: English, Amharic, Afaan Oromo.
+// Requirements 15.1–15.6, 29.4, 32.1–32.7
 // ============================================================
 
-import { getBookingById } from '@/modules/booking/infrastructure/repository';
 import { createSupabaseServiceClient } from '@/modules/auth/infrastructure/supabase';
 
-interface SmsMessage {
-  phone: string;
-  message: string;
-  templateId?: string;
-}
+// ── Africa's Talking client ───────────────────────────────────
 
-interface AfricasTalkingResponse {
-  SMSMessageData: {
-    Message: string;
-    Recipients: Array<{
-      statusCode: number;
-      number: string;
-      cost: string;
-      status: string;
-      messageId: string;
-    }>;
-  };
-}
+const AT_SANDBOX_URL = 'https://api.sandbox.africastalking.com/version1/messaging';
+const AT_LIVE_URL    = 'https://api.africastalking.com/version1/messaging';
 
-const AT_BASE_URL = 'https://api.sandbox.africastalking.com/version1/messaging';
-const AT_LIVE_URL = 'https://api.africastalking.com/version1/messaging';
-
-async function sendSmsViaAT(message: SmsMessage): Promise<boolean> {
-  const apiKey = process.env.AFRICAS_TALKING_API_KEY;
-  const username = process.env.AFRICAS_TALKING_USERNAME ?? 'sandbox';
+async function sendRaw(phone: string, message: string): Promise<boolean> {
+  const apiKey   = process.env.AFRICASTALKING_API_KEY;
+  const username = process.env.AFRICASTALKING_USERNAME ?? 'sandbox';
+  const senderId = process.env.AFRICASTALKING_SENDER_ID;
 
   if (!apiKey) {
-    console.warn('[sendSmsViaAT] AFRICAS_TALKING_API_KEY not configured');
+    console.warn('[SMS] AFRICASTALKING_API_KEY not set — skipping SMS');
     return false;
   }
 
-  const isProduction = process.env.NODE_ENV === 'production';
-  const baseUrl = isProduction ? AT_LIVE_URL : AT_BASE_URL;
+  const isLive = username !== 'sandbox';
+  const url    = isLive ? AT_LIVE_URL : AT_SANDBOX_URL;
 
-  const formData = new URLSearchParams();
-  formData.append('username', username);
-  formData.append('to', message.phone);
-  formData.append('message', message.message);
+  const body = new URLSearchParams({ username, to: phone, message });
+  if (senderId) body.append('from', senderId);
 
   try {
-    const res = await fetch(`${baseUrl}/send`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'apiKey': apiKey,
-      },
-      body: formData,
+    const res  = await fetch(url, {
+      method:  'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', apiKey },
+      body,
     });
+    const json = await res.json() as any;
+    const recipient = json?.SMSMessageData?.Recipients?.[0];
 
-    const json = (await res.json()) as AfricasTalkingResponse;
-    const recipient = json.SMSMessageData?.Recipients?.[0];
-
-    if (recipient?.statusCode === 101) {
-      console.warn(`[sendSmsViaAT] Message rejected: ${recipient.status}`);
+    if (!res.ok || recipient?.statusCode === 401) {
+      console.warn(`[SMS] Rejected: ${recipient?.status ?? res.statusText}`);
       return false;
     }
 
-    console.log(`[sendSmsViaAT] Message sent to ${message.phone} (${recipient?.messageId})`);
+    console.log(`[SMS] Sent to ${phone} — messageId: ${recipient?.messageId}`);
     return true;
   } catch (err: any) {
-    console.error('[sendSmsViaAT] Request failed:', err.message);
+    console.error('[SMS] Request failed:', err.message);
     return false;
   }
 }
 
 /**
- * Sends a booking confirmation SMS to a guest.
- * Requirement 24.1
+ * Sends an SMS with 2-attempt retry (30 s delay between attempts).
+ * On final failure, logs the failure to the bookings table.
+ * Requirements 15.5, 32.4
  */
-export async function sendBookingConfirmationSms(bookingId: string): Promise<boolean> {
-  const booking = await getBookingById(bookingId);
-  if (!booking) return false;
+export async function sendSms(
+  phone: string,
+  message: string,
+  bookingId?: string,
+  templateId?: string
+): Promise<boolean> {
+  // Attempt 1
+  let success = await sendRaw(phone, message);
 
-  const nights = Math.round((new Date(booking.check_out_date).getTime() - new Date(booking.check_in_date).getTime()) / 86400000);
-  const message = [
-    `Booking confirmed! ${booking.booking_reference}`,
-    `Guest: ${booking.guest_name}`,
-    `Check-in: ${booking.check_in_date} · Check-out: ${booking.check_out_date}`,
-    `${nights} night(s) · ETB ${booking.total_amount?.toFixed(2)}`,
-    `Status: ${booking.booking_status}`,
-    `Contact: +251 XXX XXX XXX`,
-  ].join('\n');
+  // Attempt 2 after 30 s
+  if (!success) {
+    await new Promise((r) => setTimeout(r, 30_000));
+    success = await sendRaw(phone, message);
+  }
 
-  return sendSmsViaAT({
-    phone: booking.guest_phone,
-    message,
-    templateId: 'booking_confirmation',
-  });
+  // Log failure to booking record (Req 15.5)
+  if (!success && bookingId) {
+    try {
+      const supabase = createSupabaseServiceClient();
+      await supabase
+        .from('bookings')
+        .update({
+          sms_failure_count: supabase.rpc('increment_sms_failure', { booking_id: bookingId }) as any,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', bookingId);
+    } catch { /* non-critical */ }
+  }
+
+  return success;
+}
+
+// ── SMS Templates ─────────────────────────────────────────────
+
+type Locale = 'en' | 'am' | 'om';
+
+interface BookingData {
+  booking_reference: string;
+  guest_name: string;
+  room_type: string;
+  check_in_date: string;
+  check_out_date: string;
+  total_amount: number;
+  guest_phone: string;
+  guest_language?: string;
+  booking_status?: string;
+}
+
+interface HotelConfig {
+  hotel_address?: string;
+  hotel_phone?: string;
+  reception_hours?: string;
+  checkin_time?: string;
+  app_url?: string;
+}
+
+function locale(booking: BookingData): Locale {
+  const l = booking.guest_language;
+  if (l === 'am' || l === 'om') return l;
+  return 'en';
+}
+
+// ── Template: Booking Confirmation (Req 15.1–15.2) ───────────
+
+export function bookingConfirmationMessage(b: BookingData, config: HotelConfig): string {
+  const lang = locale(b);
+  const appUrl = config.app_url ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://hararrashotel.com';
+  const lookupUrl = `${appUrl}/lookup`;
+
+  const templates: Record<Locale, string> = {
+    en: [
+      `✅ Booking Confirmed! Ref: ${b.booking_reference}`,
+      `Guest: ${b.guest_name}`,
+      `Room: ${b.room_type}`,
+      `Check-in: ${b.check_in_date} | Check-out: ${b.check_out_date}`,
+      `Total: ETB ${b.total_amount?.toFixed(2)}`,
+      `View booking: ${lookupUrl}`,
+    ].join('\n'),
+
+    am: [
+      `✅ ቦታ ማስያዝ ተረጋግጧል! ቁጥር: ${b.booking_reference}`,
+      `እንግዳ: ${b.guest_name}`,
+      `ክፍል: ${b.room_type}`,
+      `ቼክ-ኢን: ${b.check_in_date} | ቼክ-አውት: ${b.check_out_date}`,
+      `ጠቅላላ: ETB ${b.total_amount?.toFixed(2)}`,
+      `ቦታ ማስያዝ ይመልከቱ: ${lookupUrl}`,
+    ].join('\n'),
+
+    om: [
+      `✅ Booking mirkaneeffame! Lakk: ${b.booking_reference}`,
+      `Keessumaa: ${b.guest_name}`,
+      `Kutaa: ${b.room_type}`,
+      `Check-in: ${b.check_in_date} | Check-out: ${b.check_out_date}`,
+      `Waliigala: ETB ${b.total_amount?.toFixed(2)}`,
+      `Booking ilaali: ${lookupUrl}`,
+    ].join('\n'),
+  };
+
+  return templates[lang];
+}
+
+// ── Template: Check-in Instructions (Req 15.3–15.4) ──────────
+
+export function checkInInstructionsMessage(b: BookingData, config: HotelConfig): string {
+  const lang = locale(b);
+  const address  = config.hotel_address  ?? 'Harar Jugol, Harar, Ethiopia';
+  const phone    = config.hotel_phone    ?? '+251256660027';
+  const hours    = config.reception_hours ?? '24/7';
+  const ciTime   = config.checkin_time   ?? '14:00';
+
+  const templates: Record<Locale, string> = {
+    en: [
+      `📋 Check-in Instructions — ${b.booking_reference}`,
+      `Check-in time: ${ciTime}`,
+      `Address: ${address}`,
+      `Reception: ${hours} | Tel: ${phone}`,
+      `Please bring: Valid government ID + Booking Reference`,
+    ].join('\n'),
+
+    am: [
+      `📋 የቼክ-ኢን መመሪያ — ${b.booking_reference}`,
+      `የቼክ-ኢን ጊዜ: ${ciTime}`,
+      `አድራሻ: ${address}`,
+      `ሪሴፕሽን: ${hours} | ስልክ: ${phone}`,
+      `ያምጡ: ትክክለኛ መታወቂያ + የቦታ ማስያዝ ቁጥር`,
+    ].join('\n'),
+
+    om: [
+      `📋 Qajeelfama Check-in — ${b.booking_reference}`,
+      `Yeroo check-in: ${ciTime}`,
+      `Teessoo: ${address}`,
+      `Simsiiraa: ${hours} | Bilbila: ${phone}`,
+      `Fidi: ID mootummaa + Lakk. booking`,
+    ].join('\n'),
+  };
+
+  return templates[lang];
+}
+
+// ── Template: Cash Pending (Req 15.6) ────────────────────────
+
+export function cashPendingMessage(b: BookingData, config: HotelConfig): string {
+  const lang = locale(b);
+  const address = config.hotel_address ?? 'Harar Jugol, Harar, Ethiopia';
+  const phone   = config.hotel_phone   ?? '+251256660027';
+
+  const templates: Record<Locale, string> = {
+    en: [
+      `🏨 Room Reserved — ${b.booking_reference}`,
+      `${b.guest_name}, your room is held.`,
+      `Please pay ETB ${b.total_amount?.toFixed(2)} at the front desk.`,
+      `Check-in: ${b.check_in_date}`,
+      `Address: ${address} | Tel: ${phone}`,
+    ].join('\n'),
+
+    am: [
+      `🏨 ክፍል ተይዟል — ${b.booking_reference}`,
+      `${b.guest_name}፣ ክፍልዎ ተይዟል።`,
+      `ETB ${b.total_amount?.toFixed(2)} ፊት ለፊት ቢሮ ይክፈሉ።`,
+      `ቼክ-ኢን: ${b.check_in_date}`,
+      `አድራሻ: ${address} | ስልክ: ${phone}`,
+    ].join('\n'),
+
+    om: [
+      `🏨 Kutaan qabame — ${b.booking_reference}`,
+      `${b.guest_name}, kutaan kee qabameera.`,
+      `ETB ${b.total_amount?.toFixed(2)} fuula dura kafali.`,
+      `Check-in: ${b.check_in_date}`,
+      `Teessoo: ${address} | Bilbila: ${phone}`,
+    ].join('\n'),
+  };
+
+  return templates[lang];
+}
+
+// ── Template: Pre-Arrival Reminder (Req 32.1–32.3) ───────────
+
+export function preArrivalReminderMessage(b: BookingData, config: HotelConfig): string {
+  const lang = locale(b);
+  const address = config.hotel_address ?? 'Harar Jugol, Harar, Ethiopia';
+  const ciTime  = config.checkin_time  ?? '14:00';
+  const appUrl  = config.app_url ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://hararrashotel.com';
+
+  const templates: Record<Locale, string> = {
+    en: [
+      `⏰ Reminder: Check-in tomorrow!`,
+      `Ref: ${b.booking_reference} | ${b.guest_name}`,
+      `Room: ${b.room_type} | Check-in: ${b.check_in_date} at ${ciTime}`,
+      `Address: ${address}`,
+      `Ticket: ${appUrl}/lookup`,
+    ].join('\n'),
+
+    am: [
+      `⏰ ማስታወሻ: ነገ ቼክ-ኢን!`,
+      `ቁጥር: ${b.booking_reference} | ${b.guest_name}`,
+      `ክፍል: ${b.room_type} | ቼክ-ኢን: ${b.check_in_date} ሰዓት ${ciTime}`,
+      `አድራሻ: ${address}`,
+      `ቲኬት: ${appUrl}/lookup`,
+    ].join('\n'),
+
+    om: [
+      `⏰ Yaadachiisa: Boru check-in!`,
+      `Lakk: ${b.booking_reference} | ${b.guest_name}`,
+      `Kutaa: ${b.room_type} | Check-in: ${b.check_in_date} sa'a ${ciTime}`,
+      `Teessoo: ${address}`,
+      `Tikeeta: ${appUrl}/lookup`,
+    ].join('\n'),
+  };
+
+  return templates[lang];
+}
+
+// ── Template: Cancellation (Req 16.10) ───────────────────────
+
+export function cancellationMessage(b: BookingData, refundTier: 'full' | 'partial' | 'none'): string {
+  const lang = locale(b);
+  const refundText: Record<typeof refundTier, Record<Locale, string>> = {
+    full:    { en: 'Full refund will be processed.', am: 'ሙሉ ተመላሽ ይሰጣል።', om: 'Deebii guutuu ni kennamaaf.' },
+    partial: { en: '50% refund will be processed.', am: '50% ተመላሽ ይሰጣል።', om: 'Deebii 50% ni kennamaaf.' },
+    none:    { en: 'No refund applicable per policy.', am: 'ፖሊሲ መሰረት ተመላሽ የለም።', om: 'Deebii hin jiru.' },
+  };
+
+  const templates: Record<Locale, string> = {
+    en: [`❌ Booking Cancelled — ${b.booking_reference}`, refundText[refundTier].en, `Questions? Contact us.`].join('\n'),
+    am: [`❌ ቦታ ማስያዝ ተሰርዟል — ${b.booking_reference}`, refundText[refundTier].am, `ጥያቄ ካለ ያግኙን።`].join('\n'),
+    om: [`❌ Booking haqame — ${b.booking_reference}`, refundText[refundTier].om, `Gaaffii yoo qabdu nu quunnamaa.`].join('\n'),
+  };
+
+  return templates[lang];
+}
+
+// ── Template: Feedback (Req 35.1) ────────────────────────────
+
+export function feedbackMessage(b: BookingData, feedbackToken: string, config: HotelConfig): string {
+  const lang = locale(b);
+  const appUrl = config.app_url ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://hararrashotel.com';
+  const feedbackUrl = `${appUrl}/feedback/${feedbackToken}`;
+
+  const templates: Record<Locale, string> = {
+    en: [`🌟 Thank you for staying at Ras Hotel, ${b.guest_name}!`, `Rate your experience (1-5 stars):`, feedbackUrl, `Link valid for 7 days.`].join('\n'),
+    am: [`🌟 ራስ ሆቴል ስለ ጎበኙ እናመሰግናለን፣ ${b.guest_name}!`, `ልምድዎን ይገምግሙ (1-5 ኮከብ):`, feedbackUrl, `ሊንክ ለ7 ቀናት ይሰራል።`].join('\n'),
+    om: [`🌟 Hoteela Ras daawwatteef galatoomi, ${b.guest_name}!`, `Muuxannoo kee madaali (urjii 1-5):`, feedbackUrl, `Liinkiin guyyaa 7 hojjata.`].join('\n'),
+  };
+
+  return templates[lang];
+}
+
+// ── High-level helpers called from API routes ─────────────────
+
+/**
+ * Fetches hotel config from DB for use in SMS templates.
+ */
+export async function getHotelConfigForSms(): Promise<HotelConfig> {
+  try {
+    const supabase = createSupabaseServiceClient();
+    const { data } = await supabase
+      .from('hotel_configuration')
+      .select('key, value')
+      .in('key', ['hotel_address', 'hotel_phone', 'reception_hours', 'checkin_time']);
+    const map = Object.fromEntries((data ?? []).map((c) => [c.key, c.value]));
+    return {
+      hotel_address:   map.hotel_address,
+      hotel_phone:     map.hotel_phone,
+      reception_hours: map.reception_hours,
+      checkin_time:    map.checkin_time,
+      app_url:         process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+    };
+  } catch {
+    return { app_url: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000' };
+  }
 }
 
 /**
- * Sends a check-in reminder SMS to a guest.
- * Requirement 24.2
+ * Sends booking confirmation + check-in instructions SMS.
+ * Called after payment is confirmed (Req 15.1–15.4).
  */
-export async function sendCheckinReminderSms(bookingId: string): Promise<boolean> {
-  const booking = await getBookingById(bookingId);
-  if (!booking) return false;
+export async function sendBookingConfirmedSms(booking: BookingData): Promise<void> {
+  const config = await getHotelConfigForSms();
 
-  const message = [
-    `Welcome to Ras Hotel! ${booking.booking_reference}`,
-    `Check-in time: 14:00 today`,
-    `Come to the front desk with your ID.`,
-    `Questions? Call +251 XXX XXX XXX`,
-  ].join('\n');
+  // Send confirmation SMS
+  const confirmMsg = bookingConfirmationMessage(booking, config);
+  await sendSms(booking.guest_phone, confirmMsg, undefined, 'booking_confirmation');
 
-  return sendSmsViaAT({
-    phone: booking.guest_phone,
-    message,
-    templateId: 'checkin_reminder',
-  });
+  // Send check-in instructions SMS (second message, Req 15.3)
+  const ciMsg = checkInInstructionsMessage(booking, config);
+  await sendSms(booking.guest_phone, ciMsg, undefined, 'checkin_instructions');
 }
 
 /**
- * Sends a checkout/feedback SMS to a guest.
- * Requirement 24.3
+ * Sends cash-pending SMS for walk-in bookings (Req 15.6).
  */
-export async function sendFeedbackSms(bookingId: string): Promise<boolean> {
-  const booking = await getBookingById(bookingId);
-  if (!booking) return false;
-
-  const message = [
-    `Thank you for staying at Ras Hotel!`,
-    `${booking.guest_name}, please rate your experience:`,
-    `https://rashotel.example.com/feedback/${booking.id}`,
-    `Your feedback helps us improve.`,
-  ].join('\n');
-
-  return sendSmsViaAT({
-    phone: booking.guest_phone,
-    message,
-    templateId: 'feedback_request',
-  });
+export async function sendCashPendingSms(booking: BookingData): Promise<void> {
+  const config = await getHotelConfigForSms();
+  const msg = cashPendingMessage(booking, config);
+  await sendSms(booking.guest_phone, msg, undefined, 'cash_pending');
 }
 
 /**
- * Sends an outstanding payment reminder SMS.
- * Requirement 24.4
+ * Sends pre-arrival reminder SMS (Req 32.1).
  */
-export async function sendPaymentReminderSms(bookingId: string): Promise<boolean> {
-  const booking = await getBookingById(bookingId);
-  if (!booking || booking.booking_status !== 'Reserved_Unpaid') return false;
-
-  const message = [
-    `Payment pending: ${booking.booking_reference}`,
-    `Outstanding: ETB ${booking.total_amount?.toFixed(2)}`,
-    `Check-in: ${booking.check_in_date}`,
-    `Please complete payment. Contact us at +251 XXX XXX XXX`,
-  ].join('\n');
-
-  return sendSmsViaAT({
-    phone: booking.guest_phone,
-    message,
-    templateId: 'payment_reminder',
-  });
+export async function sendPreArrivalReminderSms(booking: BookingData): Promise<void> {
+  const config = await getHotelConfigForSms();
+  const msg = preArrivalReminderMessage(booking, config);
+  await sendSms(booking.guest_phone, msg, undefined, 'pre_arrival_reminder');
 }
 
 /**
- * Records an SMS message in the audit log for historical reference.
- * Requirement 24.5
+ * Sends cancellation SMS (Req 16.10).
  */
-export async function recordSmsLog(bookingId: string, templateId: string, success: boolean): Promise<void> {
-  const supabase = createSupabaseServiceClient();
-  await supabase.from('notifications').insert({
-    booking_id:       bookingId,
-    notification_type: 'sms',
-    template_id:      templateId,
-    status:           success ? 'sent' : 'failed',
-    created_at:       new Date().toISOString(),
-    payload:          { template: templateId, success },
-  }).catch(() => {
-    // Don't block if audit logging fails
-    console.warn('[recordSmsLog] Failed to record SMS in audit log');
-  });
+export async function sendCancellationSms(booking: BookingData, refundTier: 'full' | 'partial' | 'none'): Promise<void> {
+  const msg = cancellationMessage(booking, refundTier);
+  await sendSms(booking.guest_phone, msg, undefined, 'cancellation');
 }
 
 /**
- * Queues an SMS for asynchronous sending.
- * Used by background jobs (Task 20.2).
+ * Sends post-stay feedback SMS (Req 35.1).
  */
-export async function enqueueSms(bookingId: string, templateId: string): Promise<void> {
-  const supabase = createSupabaseServiceClient();
-  await supabase.from('notification_queue').insert({
-    booking_id:       bookingId,
-    template_id:      templateId,
-    status:           'pending',
-    created_at:       new Date().toISOString(),
-  }).catch((err) => {
-    console.error('[enqueueSms] Failed to queue SMS:', err.message);
-  });
+export async function sendFeedbackSms(booking: BookingData, feedbackToken: string): Promise<void> {
+  const config = await getHotelConfigForSms();
+  const msg = feedbackMessage(booking, feedbackToken, config);
+  await sendSms(booking.guest_phone, msg, undefined, 'feedback');
 }

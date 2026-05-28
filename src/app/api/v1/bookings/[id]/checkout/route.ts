@@ -9,6 +9,7 @@ import { getBookingById, updateBookingStatus } from '@/modules/booking/infrastru
 import { updateRoomStatus } from '@/modules/rooms/infrastructure/repository';
 import { requireAuth } from '@/modules/auth/domain/session';
 import { createSupabaseServiceClient } from '@/modules/auth/infrastructure/supabase';
+import { sendFeedbackSms } from '@/modules/notifications/infrastructure/sms';
 
 type Params = { params: { id: string } };
 
@@ -25,8 +26,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
-    // Guard: reject if not currently Checked_In (Req 18.5)
-    if (booking.booking_status !== 'Checked_In') {
+    // Guard: reject if not currently checked_in (Req 18.5)
+    if (booking.booking_status !== 'checked_in') {
       return NextResponse.json(
         {
           error: {
@@ -67,17 +68,11 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
-    const updated = await updateBookingStatus(
-      params.id,
-      'Checked_Out',
-      auth.session!.user.id
-    );
+    const updated = await updateBookingStatus(params.id, 'checked_out', auth.user!.id);
+    await updateRoomStatus(booking.room_id, 'available');
 
-    await updateRoomStatus(booking.room_id, 'Available');
-
-    // Trigger feedback SMS (async, via background job or inline)
-    // This is handled by the wiring step (Task 20.2) — noted here for traceability
-    void triggerFeedbackSms(booking.id).catch(console.warn);
+    // Send post-stay feedback SMS (Req 35.1)
+    void triggerFeedbackSms(booking).catch(console.warn);
 
     return NextResponse.json({
       data: {
@@ -95,7 +90,23 @@ export async function POST(request: NextRequest, { params }: Params) {
   }
 }
 
-async function triggerFeedbackSms(bookingId: string): Promise<void> {
-  // Implemented in Task 20.2 wiring step — stub for now
-  console.log(`[feedback-sms] Enqueue feedback SMS for booking ${bookingId}`);
+async function triggerFeedbackSms(booking: Awaited<ReturnType<typeof getBookingById>>): Promise<void> {
+  if (!booking) return;
+
+  // Generate a short feedback token (booking ID prefix is sufficient for lookup)
+  const feedbackToken = booking.id.replace(/-/g, '').slice(0, 16);
+
+  await sendFeedbackSms(
+    {
+      booking_reference: booking.booking_reference,
+      guest_name:        booking.guest_name,
+      room_type:         (booking as any).room_type ?? '',
+      check_in_date:     booking.check_in_date,
+      check_out_date:    booking.check_out_date,
+      total_amount:      booking.total_amount,
+      guest_phone:       booking.guest_phone,
+      guest_language:    booking.guest_language ?? 'en',
+    },
+    feedbackToken
+  );
 }

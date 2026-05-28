@@ -84,7 +84,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const updated = await updateRoom(params.id, updates as any);
 
     await writeAuditLog({
-      actor:       auth.session!.user.id,
+      actor:       auth.user!.id,
       action_type: AuditActionType.RoomModified,
       entity_type: EntityType.Room,
       entity_id:   params.id,
@@ -134,7 +134,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     await deactivateRoom(params.id);
 
     await writeAuditLog({
-      actor:       auth.session!.user.id,
+      actor:       auth.user!.id,
       action_type: AuditActionType.RoomDeactivated,
       entity_type: EntityType.Room,
       entity_id:   params.id,

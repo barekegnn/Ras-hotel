@@ -44,15 +44,15 @@ export async function POST(request: NextRequest) {
     const serviceClient = createSupabaseServiceClient();
     const { data: staffData } = await serviceClient
       .from('staff_accounts')
-      .select('id')
+      .select('id, auth_id')
       .eq('username', username)
       .eq('is_active', true)
       .single();
 
-    // 3. Fetch email from auth.users (service role can access this)
+    // 3. Fetch email from auth.users using auth_id (not the staff_accounts.id)
     let email: string | null = null;
-    if (staffData?.id) {
-      const { data: authUser } = await serviceClient.auth.admin.getUserById(staffData.id);
+    if (staffData?.auth_id) {
+      const { data: authUser } = await serviceClient.auth.admin.getUserById(staffData.auth_id);
       email = authUser?.user?.email ?? null;
     }
 
@@ -91,10 +91,11 @@ export async function POST(request: NextRequest) {
     await recordSuccessfulLogin(data.session.user.id);
 
     // 6. Check if password change is required
+    // Use auth_id (= data.session.user.id) to look up the staff account
     const { data: staffAccount } = await serviceClient
       .from('staff_accounts')
       .select('must_change_password, role, full_name')
-      .eq('id', data.session.user.id)
+      .eq('auth_id', data.session.user.id)
       .single();
 
     return NextResponse.json({

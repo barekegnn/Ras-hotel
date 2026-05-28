@@ -35,15 +35,19 @@ interface BookingInfo {
 }
 
 const BOOKING_STATUS_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
-  Reserved_Unpaid:         { bg: 'bg-yellow-50',  text: 'text-yellow-900', icon: '⏳' },
-  Paid:                    { bg: 'bg-blue-50',    text: 'text-blue-900',   icon: '✓' },
-  Checked_In:              { bg: 'bg-green-50',   text: 'text-green-900',  icon: '🔑' },
-  Checked_Out:             { bg: 'bg-gray-50',    text: 'text-gray-900',   icon: '✓' },
-  Cancelled_Full_Refund:   { bg: 'bg-red-50',     text: 'text-red-900',    icon: '✗' },
-  Cancelled_Partial_Refund:{ bg: 'bg-red-50',     text: 'text-red-900',    icon: '✗' },
-  Cancelled_No_Refund:     { bg: 'bg-red-50',     text: 'text-red-900',    icon: '✗' },
-  No_Show:                 { bg: 'bg-orange-50',  text: 'text-orange-900', icon: '—' },
+  reserved_unpaid:          { bg: 'bg-yellow-50',  text: 'text-yellow-900', icon: '⏳' },
+  paid:                     { bg: 'bg-blue-50',    text: 'text-blue-900',   icon: '✓' },
+  checked_in:               { bg: 'bg-green-50',   text: 'text-green-900',  icon: '🔑' },
+  checked_out:              { bg: 'bg-gray-50',    text: 'text-gray-900',   icon: '✓' },
+  cancelled_full_refund:    { bg: 'bg-red-50',     text: 'text-red-900',    icon: '✗' },
+  cancelled_partial_refund: { bg: 'bg-red-50',     text: 'text-red-900',    icon: '✗' },
+  cancelled_no_refund:      { bg: 'bg-red-50',     text: 'text-red-900',    icon: '✗' },
+  no_show:                  { bg: 'bg-orange-50',  text: 'text-orange-900', icon: '—' },
 };
+const DEFAULT_STATUS_COLOR = { bg: 'bg-gray-50', text: 'text-gray-900', icon: '📋' };
+function getStatusColor(status: string) {
+  return BOOKING_STATUS_COLORS[status] ?? DEFAULT_STATUS_COLOR;
+}
 
 export default function LookupPage() {
   const [ref, setRef]           = useState('');
@@ -153,11 +157,11 @@ export default function LookupPage() {
           <div className="space-y-6">
 
             {/* Status card */}
-            <div className={`rounded-2xl ${BOOKING_STATUS_COLORS[booking.booking_status].bg} border-2 border-current p-8`}>
+            <div className={`rounded-2xl ${getStatusColor(booking.booking_status).bg} border-2 border-current p-8`}>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className={`text-5xl font-bold ${BOOKING_STATUS_COLORS[booking.booking_status].text}`}>
-                    {BOOKING_STATUS_COLORS[booking.booking_status].icon}
+                  <p className={`text-5xl font-bold ${getStatusColor(booking.booking_status).text}`}>
+                    {getStatusColor(booking.booking_status).icon}
                   </p>
                   <h2 className="text-3xl font-bold text-gray-900 mt-4">
                     {booking.guest_name}
@@ -165,11 +169,11 @@ export default function LookupPage() {
                   <p className="font-mono text-lg text-gray-600 mt-2">{booking.booking_reference}</p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-bold uppercase tracking-wide ${BOOKING_STATUS_COLORS[booking.booking_status].text}`}>
-                    {booking.booking_status === 'Reserved_Unpaid' ? 'Awaiting payment' :
-                     booking.booking_status === 'Paid' ? 'Paid & ready' :
-                     booking.booking_status === 'Checked_In' ? 'Currently staying' :
-                     booking.booking_status === 'Checked_Out' ? 'Completed' :
+                  <p className={`text-sm font-bold uppercase tracking-wide ${getStatusColor(booking.booking_status).text}`}>
+                    {booking.booking_status === 'reserved_unpaid' ? 'Awaiting payment' :
+                     booking.booking_status === 'paid'            ? 'Paid & ready' :
+                     booking.booking_status === 'checked_in'      ? 'Currently staying' :
+                     booking.booking_status === 'checked_out'     ? 'Completed' :
                      booking.booking_status.replace(/_/g, ' ')}
                   </p>
                 </div>
@@ -261,7 +265,7 @@ export default function LookupPage() {
             <div className="rounded-lg bg-gray-50 border border-gray-200 p-6 text-center">
               <p className="text-sm text-gray-700">
                 Questions about your booking?{' '}
-                <a href="mailto:info@rashotel.example.com" className="font-semibold text-harar-600 hover:text-harar-700">
+                <a href="mailto:reservation@hararrashotel.com" className="font-semibold text-harar-600 hover:text-harar-700">
                   Contact us
                 </a>
               </p>

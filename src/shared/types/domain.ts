@@ -7,14 +7,14 @@
 
 /** All valid booking statuses as defined in Requirement 38.1 */
 export const BookingStatus = {
-  Reserved_Unpaid:          'Reserved_Unpaid',
-  Paid:                     'Paid',
-  Checked_In:               'Checked_In',
-  Checked_Out:              'Checked_Out',
-  Cancelled_Full_Refund:    'Cancelled_Full_Refund',
-  Cancelled_Partial_Refund: 'Cancelled_Partial_Refund',
-  Cancelled_No_Refund:      'Cancelled_No_Refund',
-  No_Show:                  'No_Show',
+  Reserved_Unpaid:          'reserved_unpaid',
+  Paid:                     'paid',
+  Checked_In:               'checked_in',
+  Checked_Out:              'checked_out',
+  Cancelled_Full_Refund:    'cancelled_full_refund',
+  Cancelled_Partial_Refund: 'cancelled_partial_refund',
+  Cancelled_No_Refund:      'cancelled_no_refund',
+  No_Show:                  'no_show',
 } as const;
 
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
@@ -71,10 +71,10 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 // ── Room Status ───────────────────────────────────────────────
 
 export const RoomStatus = {
-  Available:       'Available',
-  Occupied:        'Occupied',
-  Reserved_Paid:   'Reserved_Paid',
-  Reserved_Unpaid: 'Reserved_Unpaid',
+  Available:       'available',
+  Occupied:        'occupied',
+  Reserved_Paid:   'reserved_paid',
+  Reserved_Unpaid: 'reserved_unpaid',
 } as const;
 
 export type RoomStatus = (typeof RoomStatus)[keyof typeof RoomStatus];
@@ -82,9 +82,11 @@ export type RoomStatus = (typeof RoomStatus)[keyof typeof RoomStatus];
 // ── Payment Method ────────────────────────────────────────────
 
 export const PaymentMethod = {
-  Cash:     'cash',
-  TeleBirr: 'telebirr',
-  CBEBirr:  'cbe_birr',
+  Cash:        'cash',
+  TeleBirr:    'telebirr',
+  CBEBirr:     'cbe_birr',
+  Chapa:       'chapa',
+  OnlineChapa: 'online_chapa',
 } as const;
 
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];

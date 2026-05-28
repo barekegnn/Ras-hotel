@@ -38,8 +38,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
-    // Must be Checked_In to extend (Req 36.1)
-    if (booking.booking_status !== 'Checked_In') {
+    // Must be checked_in to extend (Req 36.1)
+    if (booking.booking_status !== 'checked_in') {
       return NextResponse.json(
         {
           error: {
@@ -120,12 +120,12 @@ export async function POST(request: NextRequest, { params }: Params) {
       booking.check_in_date,
       new_check_out_date,
       newTotal,
-      auth.session!.user.id
+      auth.user!.id
     );
 
     // Audit log (Req 36.6)
     await writeAuditLog({
-      actor:       auth.session!.user.id,
+      actor:       auth.user!.id,
       action_type: AuditActionType.ExtensionRequest,
       entity_type: EntityType.Booking,
       entity_id:   params.id,

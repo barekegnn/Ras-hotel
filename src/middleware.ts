@@ -21,21 +21,38 @@ const MANAGER_ONLY_ROUTES = [
   '/api/v1/payments/pending',
 ];
 
-// Public API routes (no auth required)
-const PUBLIC_API_ROUTES = [
-  '/api/v1/rooms',
-  '/api/v1/bookings/lookup',
-  '/api/v1/payments/webhook',
-  '/api/v1/payments/initiate',
-  '/api/v1/chatbot',
-  '/api/v1/feedback',
-  '/api/v1/config',
+// Public API routes — method-specific rules
+// Format: { path, methods } — '*' means all methods
+const PUBLIC_API_ROUTES: Array<{ path: string; methods: string[] | '*' }> = [
+  { path: '/api/v1/auth/login',              methods: ['POST'] },   // staff login
+  { path: '/api/v1/rooms',                   methods: ['GET'] },
+  { path: '/api/v1/bookings',                methods: ['POST'] },   // online guest booking
+  { path: '/api/v1/bookings/lookup',         methods: ['GET'] },
+  { path: '/api/v1/payments/chapa-init',     methods: ['POST'] },   // guest payment init
+  { path: '/api/v1/payments/chapa-webhook',  methods: '*' },        // Chapa server callback
+  { path: '/api/v1/chatbot',                 methods: ['POST'] },
+  { path: '/api/v1/feedback',                methods: ['POST', 'GET'] },
+  { path: '/api/v1/config',                  methods: ['GET'] },
 ];
 
-function isPublicApiRoute(pathname: string): boolean {
-  return PUBLIC_API_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + '/')
-  ) && !pathname.startsWith('/api/v1/reports') && !pathname.startsWith('/api/v1/staff');
+// Summary sub-routes that are public (guest-facing, no auth needed)
+const PUBLIC_BOOKING_SUBROUTES = ['/summary'];
+
+function isPublicBookingSubroute(pathname: string): boolean {
+  // Match /api/v1/bookings/:id/<subroute>
+  const match = pathname.match(/^\/api\/v1\/bookings\/[^/]+(\/.+)$/);
+  if (!match) return false;
+  return PUBLIC_BOOKING_SUBROUTES.includes(match[1]!);
+}
+
+function isPublicApiRoute(pathname: string, method: string): boolean {
+  for (const route of PUBLIC_API_ROUTES) {
+    const matches = pathname === route.path || pathname.startsWith(route.path + '/');
+    if (!matches) continue;
+    if (route.methods === '*') return true;
+    if (route.methods.includes(method)) return true;
+  }
+  return false;
 }
 
 function isManagerOnlyRoute(pathname: string): boolean {
@@ -52,13 +69,8 @@ export async function middleware(request: NextRequest) {
 
   if (!isDashboard && !isApi) return response;
 
-  // Skip auth for public API routes (GET only for most)
-  if (isApi && isPublicApiRoute(pathname) && request.method === 'GET') {
-    return response;
-  }
-  if (pathname === '/api/v1/payments/webhook' ||
-      pathname === '/api/v1/payments/initiate' ||
-      pathname.match(/^\/api\/v1\/feedback\//)) {
+  // Skip auth for public API routes
+  if (isApi && (isPublicApiRoute(pathname, request.method) || isPublicBookingSubroute(pathname))) {
     return response;
   }
 
@@ -81,10 +93,10 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Validate session
-  const { data: { session } } = await supabase.auth.getSession();
+  // Validate user via Supabase Auth server (getUser is secure; getSession is not)
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     // API route: return 401
     if (isApi) {
       return NextResponse.json(
@@ -102,7 +114,7 @@ export async function middleware(request: NextRequest) {
   const { data: staffAccount } = await supabase
     .from('staff_accounts')
     .select('role, is_active')
-    .eq('id', session.user.id)
+    .eq('auth_id', user.id)
     .single();
 
   // Inactive or no account
@@ -130,7 +142,7 @@ export async function middleware(request: NextRequest) {
 
   // Add role to request headers for downstream use
   response.headers.set('x-staff-role', staffAccount.role);
-  response.headers.set('x-staff-id', session.user.id);
+  response.headers.set('x-staff-id', user.id);
 
   return response;
 }
@@ -139,5 +151,6 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/api/v1/:path*',
+    // /api/cron/* is excluded — secured by CRON_SECRET Bearer token instead
   ],
 };

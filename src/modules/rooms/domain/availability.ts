@@ -8,11 +8,11 @@
 
 import { createSupabaseServerClient } from '@/modules/auth/infrastructure/supabase';
 
-// Statuses that block availability (active bookings)
+// Statuses that block availability (active bookings) — must match DB enum exactly
 const BLOCKING_STATUSES = [
-  'Reserved_Unpaid',
-  'Paid',
-  'Checked_In',
+  'reserved_unpaid',
+  'paid',
+  'checked_in',
 ];
 
 /**
@@ -111,7 +111,7 @@ export function findOverlappingBookingPairs(
     booking_status: string;
   }>
 ): Array<[typeof bookings[0], typeof bookings[0]]> {
-  const active = bookings.filter((b) => BLOCKING_STATUSES.includes(b.booking_status));
+  const active = bookings.filter((b) => BLOCKING_STATUSES.includes(b.booking_status as any));
   const conflicts: Array<[typeof bookings[0], typeof bookings[0]]> = [];
 
   for (let i = 0; i < active.length; i++) {

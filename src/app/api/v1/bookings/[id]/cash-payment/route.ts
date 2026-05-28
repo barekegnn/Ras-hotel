@@ -32,7 +32,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Guard: reject if already paid (Req 31.7)
-    if (booking.booking_status === 'Paid' || booking.booking_status === 'Checked_In') {
+    if (booking.booking_status === 'paid' || booking.booking_status === 'checked_in') {
       return NextResponse.json(
         {
           error: {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
-    if (booking.booking_status !== 'Reserved_Unpaid') {
+    if (booking.booking_status !== 'reserved_unpaid') {
       return NextResponse.json(
         {
           error: {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Validate the event (Property 5)
     const validation = validateCashCollectionEvent({
       booking_id:      params.id,
-      receptionist_id: auth.session!.user.id,
+      receptionist_id: auth.user!.id,
       amount_collected: amount,
       collected_at:    new Date().toISOString(),
     });
@@ -74,12 +74,26 @@ export async function POST(request: NextRequest, { params }: Params) {
     const supabase = createSupabaseServiceClient();
     const collectedAt = new Date().toISOString();
 
+    // Resolve staff_accounts.id from auth UUID (cash_collection_events.receptionist_id is FK to staff_accounts.id)
+    const { data: staffRow } = await supabase
+      .from('staff_accounts')
+      .select('id')
+      .eq('auth_id', auth.user!.id)
+      .single();
+
+    if (!staffRow) {
+      return NextResponse.json(
+        { error: { code: 'STAFF_NOT_FOUND', message: 'Staff account not found' } },
+        { status: 403 }
+      );
+    }
+
     // Insert Cash_Collection_Event (Req 31.3)
     const { data: event, error: eventError } = await supabase
       .from('cash_collection_events')
       .insert({
         booking_id:       params.id,
-        receptionist_id:  auth.session!.user.id,
+        receptionist_id:  staffRow.id,
         amount_collected: amount,
         collected_at:     collectedAt,
       })
@@ -88,19 +102,12 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     if (eventError) throw new Error(`Failed to record cash event: ${eventError.message}`);
 
-    // Transition booking to Paid (Req 31.3)
-    const updated = await updateBookingStatus(
-      params.id,
-      'Paid',
-      auth.session!.user.id
-    );
-
-    // Update room status to Reserved_Paid
-    await updateRoomStatus(booking.room_id, 'Reserved_Paid');
+    const updated = await updateBookingStatus(params.id, 'paid', auth.user!.id);
+    await updateRoomStatus(booking.room_id, 'reserved_paid');
 
     // Write audit log (Req 31.5)
     await writeAuditLog({
-      actor:       auth.session!.user.id,
+      actor:       auth.user!.id,
       action_type: AuditActionType.CashCollectionEvent,
       entity_type: EntityType.CashCollection,
       entity_id:   event.id,

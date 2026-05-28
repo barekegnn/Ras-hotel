@@ -26,12 +26,12 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
     const updated = await updateBookingStatus(
       params.id,
-      'Checked_In',
-      auth.session!.user.id
+      'checked_in',
+      auth.user!.id
     );
 
-    // Update room status to Occupied
-    await updateRoomStatus(booking.room_id, 'Occupied');
+    // Update room status to occupied
+    await updateRoomStatus(booking.room_id, 'occupied');
 
     return NextResponse.json({ data: { booking_reference: updated.booking_reference, booking_status: updated.booking_status } });
   } catch (err: any) {
