@@ -72,6 +72,16 @@ export function findAllOverlappingPairs(
 // ── Price Resolution ──────────────────────────────────────────
 
 /**
+ * Returns a local YYYY-MM-DD string for a Date, avoiding UTC offset issues.
+ */
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
  * Returns the applicable nightly rate for a room type on a specific date.
  * Applies the seasonal rate if one is active for that date; otherwise uses basePrice.
  *
@@ -89,7 +99,7 @@ export function getApplicableRate(
   rates: SeasonalRate[],
   basePrice: number
 ): number {
-  const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
+  const dateStr = toLocalDateString(date);
 
   const applicable = rates.find(
     (r) =>
@@ -128,7 +138,7 @@ export function calculateStayPrice(
 
   while (current < end) {
     const rate = getApplicableRate(roomType, current, rates, basePrice);
-    breakdown.push({ date: current.toISOString().slice(0, 10), rate });
+    breakdown.push({ date: toLocalDateString(current), rate });
     total += rate;
     current.setDate(current.getDate() + 1);
   }

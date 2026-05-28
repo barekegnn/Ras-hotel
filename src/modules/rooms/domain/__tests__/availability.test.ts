@@ -16,8 +16,9 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-const BLOCKING = ['Reserved_Unpaid', 'Paid', 'Checked_In'];
-const CANCELLED = ['Cancelled_Full_Refund', 'Cancelled_Partial_Refund', 'Cancelled_No_Refund', 'No_Show'];
+// Must match the snake_case values used in availability.ts BLOCKING_STATUSES
+const BLOCKING = ['reserved_unpaid', 'paid', 'checked_in'];
+const CANCELLED = ['cancelled_full_refund', 'cancelled_partial_refund', 'cancelled_no_refund', 'no_show'];
 const ALL_STATUSES = [...BLOCKING, ...CANCELLED];
 
 /** Generates a booking with a valid date range */

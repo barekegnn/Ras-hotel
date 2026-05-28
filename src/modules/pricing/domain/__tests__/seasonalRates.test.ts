@@ -164,15 +164,23 @@ describe('Seasonal rate price resolution', () => {
   });
 
   it('calculates total stay price correctly across seasonal boundary', () => {
+    // Build dates using local time to match the implementation's setHours(0,0,0,0) logic
+    // Nights: Jul 30, Jul 31 (base=2000 each), Aug 1, Aug 2 (seasonal=3000 each)
+    const checkIn  = new Date(2025, 6, 30); // month is 0-indexed: 6 = July
+    const checkOut = new Date(2025, 7, 3);  // 7 = August
     const { total, nights, breakdown } = calculateStayPrice(
       'Deluxe',
-      new Date('2025-07-30'), // 2 nights at base, 2 nights at seasonal
-      new Date('2025-08-03'),
+      checkIn,
+      checkOut,
       rates,
       2000
     );
     expect(nights).toBe(4);
-    expect(total).toBe(2000 + 2000 + 3000 + 3000); // Jul 30, Jul 31 (base), Aug 1, Aug 2 (seasonal)
+    expect(breakdown[0]!.date).toBe('2025-07-30');
+    expect(breakdown[1]!.date).toBe('2025-07-31');
+    expect(breakdown[2]!.date).toBe('2025-08-01');
+    expect(breakdown[3]!.date).toBe('2025-08-02');
+    expect(total).toBe(2000 + 2000 + 3000 + 3000);
     expect(breakdown).toHaveLength(4);
   });
 });
