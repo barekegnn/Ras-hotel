@@ -1,58 +1,62 @@
 /** @type {import('next').NextConfig} */
-const withPWA = require("next-pwa")({
+const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
-  // Offline fallback page — served when a navigation request fails (Req 12.3)
+  // Offline fallback page (Req 12.3)
   fallbacks: {
     document: "/offline",
   },
-  runtimeCaching: [
-    // Offline fallback page itself — always cache it (Req 12.3)
-    {
-      urlPattern: /^\/offline$/,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "offline-fallback",
-        expiration: { maxEntries: 1, maxAgeSeconds: 30 * 24 * 60 * 60 },
+  workboxOptions: {
+    runtimeCaching: [
+      // Offline fallback — always cache it
+      {
+        urlPattern: /^\/offline$/,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "offline-fallback",
+          expiration: { maxEntries: 1, maxAgeSeconds: 30 * 24 * 60 * 60 },
+        },
       },
-    },
-    {
-      urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "supabase-storage",
-        expiration: { maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 },
+      // Supabase storage assets
+      {
+        urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "supabase-storage",
+          expiration: { maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 },
+        },
       },
-    },
-    {
-      urlPattern: /^\/(rooms|book|booking\/lookup|chatbot)(\/.*)?$/,
-      handler: "StaleWhileRevalidate",
-      options: {
-        cacheName: "guest-pages",
-        expiration: { maxEntries: 30, maxAgeSeconds: 24 * 60 * 60 },
+      // Guest-facing pages
+      {
+        urlPattern: /^\/(rooms|book|lookup|chatbot)(\/.*)?$/,
+        handler: "StaleWhileRevalidate",
+        options: {
+          cacheName: "guest-pages",
+          expiration: { maxEntries: 30, maxAgeSeconds: 24 * 60 * 60 },
+        },
       },
-    },
-    // Cache next/font self-hosted font files long-term
-    {
-      urlPattern: /\/_next\/static\/media\/.+\.(woff2?|ttf|otf)$/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "fonts",
-        expiration: { maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 },
+      // Self-hosted fonts (next/font)
+      {
+        urlPattern: /\/_next\/static\/media\/.+\.(woff2?|ttf|otf)$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "fonts",
+          expiration: { maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 },
+        },
       },
-    },
-    // Cache static JS/CSS chunks
-    {
-      urlPattern: /\/_next\/static\/.*/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "next-static",
-        expiration: { maxEntries: 200, maxAgeSeconds: 365 * 24 * 60 * 60 },
+      // Next.js static chunks — immutable
+      {
+        urlPattern: /\/_next\/static\/.*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "next-static",
+          expiration: { maxEntries: 200, maxAgeSeconds: 365 * 24 * 60 * 60 },
+        },
       },
-    },
-  ],
+    ],
+  },
 });
 
 const securityHeaders = [
