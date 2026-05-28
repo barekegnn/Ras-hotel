@@ -108,6 +108,23 @@ const config: Config = {
           from: { opacity: "0", transform: "translateY(-8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        "slide-in-from-bottom": {
+          from: { opacity: "0", transform: "translateY(16px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "slide-in-from-left": {
+          from: { opacity: "0", transform: "translateX(-100%)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "slide-in-from-right": {
+          from: { opacity: "0", transform: "translateX(8px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        blob: {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+          "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+        },
         pulse: {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
@@ -116,8 +133,12 @@ const config: Config = {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "slide-in": "slide-in-from-top 0.25s ease-out",
+        "slide-in": "slide-in-from-left 0.25s ease-out",
+        "slide-in-top": "slide-in-from-top 0.25s ease-out",
+        "slide-in-bottom": "slide-in-from-bottom 0.2s ease-out",
+        "slide-in-right": "slide-in-from-right 0.2s ease-out",
         "pulse-slow": "pulse 2s ease-in-out infinite",
+        blob: "blob 7s infinite",
       },
     },
   },

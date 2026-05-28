@@ -4,7 +4,20 @@ const withPWA = require("next-pwa")({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  // Offline fallback page — served when a navigation request fails (Req 12.3)
+  fallbacks: {
+    document: "/offline",
+  },
   runtimeCaching: [
+    // Offline fallback page itself — always cache it (Req 12.3)
+    {
+      urlPattern: /^\/offline$/,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "offline-fallback",
+        expiration: { maxEntries: 1, maxAgeSeconds: 30 * 24 * 60 * 60 },
+      },
+    },
     {
       urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
       handler: "CacheFirst",
@@ -21,6 +34,24 @@ const withPWA = require("next-pwa")({
         expiration: { maxEntries: 30, maxAgeSeconds: 24 * 60 * 60 },
       },
     },
+    // Cache next/font self-hosted font files long-term
+    {
+      urlPattern: /\/_next\/static\/media\/.+\.(woff2?|ttf|otf)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "fonts",
+        expiration: { maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 },
+      },
+    },
+    // Cache static JS/CSS chunks
+    {
+      urlPattern: /\/_next\/static\/.*/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "next-static",
+        expiration: { maxEntries: 200, maxAgeSeconds: 365 * 24 * 60 * 60 },
+      },
+    },
   ],
 });
 
@@ -34,25 +65,48 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  // Don't expose Next.js version in response headers
+  poweredByHeader: false,
+
   async headers() {
     return [
       {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      // Long-term cache for immutable static assets
+      {
+        source: "/_next/static/(.*)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      // Cache public images for 7 days
+      {
+        source: "/icons/(.*)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }],
+      },
     ];
   },
   images: {
+    // Enable AVIF for best compression (WebP is the fallback)
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "img.youtube.com",
+        pathname: "/vi/**",
+      },
     ],
   },
   experimental: {
     serverComponentsExternalPackages: ["@react-pdf/renderer"],
+    // Optimise package imports for tree-shaking
+    optimizePackageImports: ["lucide-react", "recharts", "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu", "@radix-ui/react-select", "@radix-ui/react-toast"],
   },
 };
 
