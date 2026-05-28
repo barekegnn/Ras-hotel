@@ -25,7 +25,10 @@ export function DashboardTopBar({ role }: Props) {
   }
 
   return (
-    <header className="flex h-16 flex-shrink-0 items-center gap-4 border-b border-gray-200 bg-white px-6">
+    <header className="flex h-14 sm:h-16 flex-shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 sm:px-6">
+
+      {/* Spacer for mobile hamburger button (shown on mobile only) */}
+      <div className="w-9 flex-shrink-0 md:hidden" aria-hidden="true" />
 
       {/* Global quick-search */}
       <form onSubmit={handleSearch} className="relative flex-1 max-w-md">
@@ -42,7 +45,7 @@ export function DashboardTopBar({ role }: Props) {
         />
       </form>
 
-      <div className="flex items-center gap-3 ml-auto">
+      <div className="flex items-center gap-2 sm:gap-3 ml-auto">
 
         {/* New booking shortcut */}
         <a href="/dashboard/bookings/new" className="btn-primary hidden sm:inline-flex">
