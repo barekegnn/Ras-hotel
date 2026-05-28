@@ -5,7 +5,7 @@
 // src/app/(staff)/dashboard/bookings/page.tsx
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { BookingStatusBadge } from '@/components/staff/BookingStatusBadge';
 import { SearchIcon, ChevronRightIcon, FilterIcon, XIcon } from '@/components/staff/Icons';
@@ -20,17 +20,30 @@ interface SearchFilters {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'Reserved_Unpaid',         label: 'Awaiting payment' },
-  { value: 'Paid',                    label: 'Paid & ready' },
-  { value: 'Checked_In',              label: 'Checked in' },
-  { value: 'Checked_Out',             label: 'Checked out' },
-  { value: 'Cancelled_Full_Refund',   label: 'Cancelled (full refund)' },
-  { value: 'Cancelled_Partial_Refund',label: 'Cancelled (50% refund)' },
-  { value: 'Cancelled_No_Refund',     label: 'Cancelled (no refund)' },
-  { value: 'No_Show',                 label: 'No-show' },
+  { value: 'reserved_unpaid',          label: 'Awaiting payment' },
+  { value: 'paid',                     label: 'Paid & ready' },
+  { value: 'checked_in',               label: 'Checked in' },
+  { value: 'checked_out',              label: 'Checked out' },
+  { value: 'cancelled_full_refund',    label: 'Cancelled (full refund)' },
+  { value: 'cancelled_partial_refund', label: 'Cancelled (50% refund)' },
+  { value: 'cancelled_no_refund',      label: 'Cancelled (no refund)' },
+  { value: 'no_show',                  label: 'No-show' },
 ];
 
 export default function BookingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-6xl space-y-4">
+        <div className="skeleton h-10 w-48 rounded-lg" />
+        {[1,2,3,4,5].map((i) => <div key={i} className="skeleton h-16 rounded-xl" />)}
+      </div>
+    }>
+      <BookingsList />
+    </Suspense>
+  );
+}
+
+function BookingsList() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -41,13 +54,14 @@ export default function BookingsPage() {
   const [error,     setError]     = useState<string | null>(null);
   const [showFilter,setShowFilter] = useState(false);
 
-  // Filter state from URL
-  const filters: SearchFilters = {
-    q:             searchParams.get('q') ?? undefined,
-    status:        searchParams.get('status') ?? undefined,
-    check_in_from: searchParams.get('check_in_from') ?? undefined,
-    check_in_to:   searchParams.get('check_in_to') ?? undefined,
-  };
+  // Read filter values directly from searchParams (stable reference)
+  const q             = searchParams.get('q') ?? undefined;
+  const status        = searchParams.get('status') ?? undefined;
+  const check_in_from = searchParams.get('check_in_from') ?? undefined;
+  const check_in_to   = searchParams.get('check_in_to') ?? undefined;
+
+  // Derived object for display/filter UI — not used as a dependency
+  const filters: SearchFilters = { q, status, check_in_from, check_in_to };
 
   const load = useCallback(async (pageNum = 1) => {
     setLoading(true);
@@ -56,10 +70,15 @@ export default function BookingsPage() {
       const params = new URLSearchParams();
       params.set('per_page', '25');
       params.set('page', String(pageNum));
-      if (filters.q)              params.set('ref', filters.q);
-      if (filters.status)         params.set('status', filters.status);
-      if (filters.check_in_from)  params.set('check_in_from', filters.check_in_from);
-      if (filters.check_in_to)    params.set('check_in_to', filters.check_in_to);
+      // Read directly from searchParams inside the callback — stable reference
+      const _q             = searchParams.get('q');
+      const _status        = searchParams.get('status');
+      const _check_in_from = searchParams.get('check_in_from');
+      const _check_in_to   = searchParams.get('check_in_to');
+      if (_q)             params.set('ref', _q);
+      if (_status)        params.set('status', _status);
+      if (_check_in_from) params.set('check_in_from', _check_in_from);
+      if (_check_in_to)   params.set('check_in_to', _check_in_to);
 
       const res = await fetch(`/api/v1/bookings?${params}`);
       const json = await res.json();
@@ -71,9 +90,10 @@ export default function BookingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  // searchParams is a stable object from Next.js — safe to depend on
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { load(1); }, [filters, load]);
+  useEffect(() => { load(1); }, [load]);
 
   function updateFilter(key: keyof SearchFilters, value: string | undefined) {
     const params = new URLSearchParams(searchParams);
@@ -242,10 +262,10 @@ export default function BookingsPage() {
 
                 {/* Status indicator */}
                 <div className={`h-3 w-3 flex-shrink-0 rounded-full
-                  ${booking.booking_status === 'Paid' ? 'bg-blue-500' :
-                    booking.booking_status === 'Reserved_Unpaid' ? 'bg-yellow-500' :
-                    booking.booking_status === 'Checked_In' ? 'bg-green-500' :
-                    booking.booking_status === 'Checked_Out' ? 'bg-gray-400' :
+                  ${booking.booking_status === 'paid'            ? 'bg-blue-500' :
+                    booking.booking_status === 'reserved_unpaid' ? 'bg-yellow-500' :
+                    booking.booking_status === 'checked_in'      ? 'bg-green-500' :
+                    booking.booking_status === 'checked_out'     ? 'bg-gray-400' :
                     'bg-red-500'}`}
                 />
 
