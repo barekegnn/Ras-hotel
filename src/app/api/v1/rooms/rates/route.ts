@@ -6,7 +6,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/modules/auth/domain/session';
+import { requireAuth, getCurrentStaffAccount } from '@/modules/auth/domain/session';
 import {
   listSeasonalRates,
   createSeasonalRate,
@@ -59,12 +59,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve staff_accounts.id (UUID PK) — seasonal_rates.created_by is a FK to staff_accounts(id)
+    const staffAccount = await getCurrentStaffAccount();
+    if (!staffAccount) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Staff account not found' } },
+        { status: 401 }
+      );
+    }
+
     const rate = await createSeasonalRate({
       room_type,
       start_date,
       end_date,
       override_price: Number(override_price),
-      created_by: auth.user!.id,
+      created_by: staffAccount.id,
     });
 
     await writeAuditLog({

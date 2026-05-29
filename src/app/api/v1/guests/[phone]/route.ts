@@ -6,7 +6,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/modules/auth/domain/session';
+import { requireAuth, getCurrentStaffAccount } from '@/modules/auth/domain/session';
 import { createSupabaseServiceClient } from '@/modules/auth/infrastructure/supabase';
 
 type Params = { params: { phone: string } };
@@ -111,12 +111,21 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
+    // Resolve staff_accounts.id (UUID PK) — NOT auth.user.id (auth UUID)
+    const staffAccount = await getCurrentStaffAccount();
+    if (!staffAccount) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Staff account not found' } },
+        { status: 401 }
+      );
+    }
+
     const { data, error } = await supabase
       .from('guest_notes')
       .insert({
         guest_phone: phone,
         note_text:   note_text.trim(),
-        author_id:   auth.user!.id,
+        author_id:   staffAccount.id,
       })
       .select()
       .single();

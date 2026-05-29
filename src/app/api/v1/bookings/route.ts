@@ -13,7 +13,7 @@ import { getRoomById } from '@/modules/rooms/infrastructure/repository';
 import { resolveStayPrice } from '@/modules/pricing/infrastructure/repository';
 import { updateRoomStatus } from '@/modules/rooms/infrastructure/repository';
 import { validateBookingForm, validateEthiopianPhone } from '@/shared/lib/validation';
-import { requireAuth } from '@/modules/auth/domain/session';
+import { requireAuth, getCurrentStaffAccount } from '@/modules/auth/domain/session';
 import { writeAuditLog } from '@/modules/audit/domain/logger';
 import { AuditActionType, EntityType, type CreateBookingInput } from '@/shared/types/domain';
 import { sendCashPendingSms } from '@/modules/notifications/infrastructure/sms';
@@ -98,10 +98,18 @@ export async function POST(request: NextRequest) {
     if (isStaff) {
       const auth = await requireAuth();
       if (auth.error) return auth.error;
-      staffId = auth.user!.id;
+      // Must use staff_accounts.id (UUID PK), NOT auth.user.id (auth UUID)
+      const staffAccount = await getCurrentStaffAccount();
+      if (!staffAccount) {
+        return NextResponse.json(
+          { error: { code: 'UNAUTHORIZED', message: 'Staff account not found' } },
+          { status: 401 }
+        );
+      }
+      staffId = staffAccount.id;
     }
 
-    const actor = staffId ?? 'guest';
+    const actor = staffId ?? `guest:${body.guest_phone}`;
 
     // ── 3. Validate the room exists and is active ─────────────
     const room = await getRoomById(room_id);
