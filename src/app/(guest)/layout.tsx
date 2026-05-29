@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { HotelAssistant } from '@/components/guest/HotelAssistant';
 import { OfflineBanner } from '@/components/shared/OfflineBanner';
 import { createSupabaseServiceClient } from '@/modules/auth/infrastructure/supabase.server';
+import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
 import { GuestMobileNav } from '@/components/guest/GuestMobileNav';
 
 async function getHotelContact() {
@@ -247,6 +248,9 @@ export default async function GuestLayout({ children }: { children: ReactNode })
 
       {/* Offline connectivity banner */}
       <OfflineBanner />
+
+      {/* PWA install prompt */}
+      <PWAInstallPrompt />
     </div>
   );
 }
