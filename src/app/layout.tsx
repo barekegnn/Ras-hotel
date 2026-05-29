@@ -44,9 +44,12 @@ export const metadata: Metadata = {
   description: 'Hotel management and booking platform — Harar, Ethiopia',
   manifest:    '/manifest.json',
   icons: {
-    icon:       '/icons/icon-192.png',
+    icon:       [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
     apple:      '/icons/apple-touch-icon.png',
-    shortcut:   '/icons/icon-192.png',
+    shortcut:   '/icons/icon-512.png',
   },
   appleWebApp: {
     capable:           true,
