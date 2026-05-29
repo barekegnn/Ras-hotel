@@ -111,9 +111,9 @@ export default function RoomsSettingsPage() {
           {rooms.length === 0 ? (
             <div className="p-8 text-center text-sm text-gray-400">No rooms yet</div>
           ) : rooms.map((r) => (
-            <div key={r.id} className="flex items-center justify-between px-5 py-4">
+            <div key={r.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-4">
               <div className="flex items-center gap-4">
-                <div className="h-9 w-9 rounded-lg bg-brand-50 flex items-center justify-center text-sm font-bold text-brand-700">
+                <div className="h-9 w-9 rounded-lg bg-brand-50 flex items-center justify-center text-sm font-bold text-brand-700 flex-shrink-0">
                   {r.room_number}
                 </div>
                 <div>
@@ -121,7 +121,7 @@ export default function RoomsSettingsPage() {
                   <p className="text-xs text-gray-500">ETB {r.base_price_per_night}/night</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 pl-13 sm:pl-0">
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold
                   ${r.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
                   {r.is_active ? 'Active' : 'Inactive'}
@@ -146,7 +146,7 @@ export default function RoomsSettingsPage() {
           <div className="w-full max-w-md rounded-xl bg-white shadow-2xl p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Add room</h3>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Room number</label>
                   <input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} required

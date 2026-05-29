@@ -129,7 +129,7 @@ export default function HotelSettingsPage() {
             <h2 className="text-sm font-semibold text-gray-700">Operational Parameters</h2>
           </div>
           <div className="p-5 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Check-in time" value={config.checkin_time} type="time"
                 onChange={(v) => update('checkin_time', v)} />
               <Field label="Check-out time" value={config.checkout_time} type="time"
@@ -138,7 +138,7 @@ export default function HotelSettingsPage() {
             <Field label="No-show threshold time" value={config.no_show_threshold_time} type="time"
               onChange={(v) => update('no_show_threshold_time', v)}
               hint="Bookings past this time without check-in are flagged as overdue" />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Cancellation window (hours)" value={config.cancellation_window_hours}
                 type="number" onChange={(v) => update('cancellation_window_hours', v)}
                 hint="Hours before check-in for full refund" />

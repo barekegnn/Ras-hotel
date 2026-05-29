@@ -81,8 +81,8 @@ export default function GuestsPage() {
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="flex gap-3">
-        <div className="relative flex-1 max-w-md">
+      <form onSubmit={handleSearch} className="flex gap-2 sm:gap-3">
+        <div className="relative flex-1">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           <input
             type="text"
@@ -94,9 +94,9 @@ export default function GuestsPage() {
                        focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
-        <button type="submit" className="btn-primary">Search</button>
+        <button type="submit" className="btn-primary flex-shrink-0">Search</button>
         {search && (
-          <button type="button" onClick={() => { setSearch(''); load(); }} className="btn-secondary">
+          <button type="button" onClick={() => { setSearch(''); load(); }} className="btn-secondary flex-shrink-0">
             Clear
           </button>
         )}
@@ -128,10 +128,10 @@ export default function GuestsPage() {
           <div className="divide-y divide-gray-100">
             {guests.map((guest) => (
               <div key={guest.guest_phone}
-                className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
+                className="flex items-center gap-3 px-4 sm:px-5 py-4 hover:bg-gray-50 transition-colors">
 
                 {/* Avatar */}
-                <div className="h-10 w-10 rounded-full bg-harar-100 flex items-center justify-center
+                <div className="h-9 w-9 rounded-full bg-harar-100 flex items-center justify-center
                                 text-sm font-bold text-harar-700 flex-shrink-0">
                   {guest.guest_name.charAt(0).toUpperCase()}
                 </div>
@@ -139,18 +139,23 @@ export default function GuestsPage() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 truncate">{guest.guest_name}</p>
-                  <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 flex-wrap">
                     <a href={`tel:${guest.guest_phone}`}
                       className="flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium">
                       <PhoneIcon className="h-3 w-3" />
                       {guest.guest_phone}
                     </a>
-                    <span>{guest.guest_nationality}</span>
+                    <span className="hidden sm:inline">{guest.guest_nationality}</span>
+                  </div>
+                  {/* Mobile stats */}
+                  <div className="flex items-center gap-3 mt-1 sm:hidden text-xs text-gray-500">
+                    <span><span className="font-bold text-gray-900">{guest.total_bookings}</span> stays</span>
+                    <span className="font-bold text-brand-600 font-mono-data">ETB {guest.total_spent.toLocaleString()}</span>
                   </div>
                 </div>
 
-                {/* Stats */}
-                <div className="hidden sm:flex items-center gap-6 text-sm flex-shrink-0">
+                {/* Desktop stats */}
+                <div className="hidden sm:flex items-center gap-5 text-sm flex-shrink-0">
                   <div className="text-center">
                     <p className="font-bold text-gray-900">{guest.total_bookings}</p>
                     <p className="text-xs text-gray-400">stays</p>
@@ -170,8 +175,8 @@ export default function GuestsPage() {
                 {/* Action */}
                 <Link
                   href={`/dashboard/bookings?q=${encodeURIComponent(guest.guest_phone)}`}
-                  className="btn-ghost text-xs flex-shrink-0">
-                  View bookings →
+                  className="btn-ghost text-xs flex-shrink-0 hidden sm:inline-flex">
+                  View →
                 </Link>
               </div>
             ))}

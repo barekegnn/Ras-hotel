@@ -104,7 +104,7 @@ export default function PricingSettingsPage() {
           {rates.length === 0 ? (
             <div className="p-8 text-center text-sm text-gray-400">No seasonal rates configured</div>
           ) : rates.map((r) => (
-            <div key={r.id} className="flex items-center justify-between px-5 py-4">
+            <div key={r.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-5 py-4">
               <div>
                 <p className="text-sm font-semibold text-gray-900">{r.room_type}</p>
                 <p className="text-xs text-gray-500">{r.start_date} → {r.end_date}</p>
@@ -137,7 +137,7 @@ export default function PricingSettingsPage() {
                   <option>Family</option>
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start date</label>
                   <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required

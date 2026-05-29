@@ -122,17 +122,17 @@ export default function ArrivalsPage() {
 
       {/* Tabs + table */}
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        <div className="grid grid-cols-4 divide-x divide-gray-200 border-b border-gray-200">
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-200 border-b border-gray-200">
           {[
-            { key: 'all',        label: 'All arrivals',  count: bookings.length, color: 'text-gray-900' },
-            { key: 'paid',       label: 'Paid & ready',  count: paid,            color: 'text-blue-700' },
-            { key: 'unpaid',     label: 'Awaiting cash', count: unpaid,          color: 'text-yellow-700' },
-            { key: 'checked_in', label: 'Checked in',    count: checkedIn,       color: 'text-green-700' },
+            { key: 'all',        label: 'All',          count: bookings.length, color: 'text-gray-900' },
+            { key: 'paid',       label: 'Paid',         count: paid,            color: 'text-blue-700' },
+            { key: 'unpaid',     label: 'Awaiting',     count: unpaid,          color: 'text-yellow-700' },
+            { key: 'checked_in', label: 'Checked in',   count: checkedIn,       color: 'text-green-700' },
           ].map(({ key, label, count, color }) => (
             <button key={key} onClick={() => setTab(key as Tab)}
-              className={`p-5 text-left transition-colors hover:bg-gray-50 ${tab === key ? 'bg-gray-50' : ''}`}>
-              <div className={`text-2xl font-bold tabular-nums ${color}`}>{loading ? '–' : count}</div>
-              <div className="text-xs font-medium text-gray-500 mt-1">{label}</div>
+              className={`p-3 sm:p-5 text-left transition-colors hover:bg-gray-50 ${tab === key ? 'bg-gray-50' : ''}`}>
+              <div className={`text-xl sm:text-2xl font-bold tabular-nums ${color}`}>{loading ? '–' : count}</div>
+              <div className="text-xs font-medium text-gray-500 mt-0.5 sm:mt-1">{label}</div>
             </button>
           ))}
         </div>
@@ -158,42 +158,43 @@ export default function ArrivalsPage() {
               const isActing = actingOn === booking.id;
               return (
                 <div key={booking.id}
-                  className={`flex items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50
+                  className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 transition-colors hover:bg-gray-50
                     ${overdue ? 'bg-red-50/50' : ''}`}>
 
-                  <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full
-                    ${booking.booking_status === 'paid'            ? 'bg-blue-500' :
-                      booking.booking_status === 'reserved_unpaid' ? 'bg-yellow-500' :
-                      booking.booking_status === 'checked_in'      ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full
+                      ${booking.booking_status === 'paid'            ? 'bg-blue-500' :
+                        booking.booking_status === 'reserved_unpaid' ? 'bg-yellow-500' :
+                        booking.booking_status === 'checked_in'      ? 'bg-green-500' : 'bg-gray-300'}`} />
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-900 truncate">{booking.guest_name}</span>
-                      {overdue && <span className="badge-urgent">Overdue</span>}
-                      {booking.special_request && (
-                        <span title={booking.special_request} className="badge-paid cursor-help">
-                          Special request
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
-                      <span className="font-mono-data">{booking.booking_reference}</span>
-                      {(booking as ArrivalBooking).room_number && (
-                        <span>Room {(booking as ArrivalBooking).room_number}</span>
-                      )}
-                      {booking.guest_phone && (
-                        <a href={`tel:${booking.guest_phone}`}
-                          className="flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium">
-                          <PhoneIcon className="h-3 w-3" />
-                          {booking.guest_phone}
-                        </a>
-                      )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-gray-900 truncate">{booking.guest_name}</span>
+                        {overdue && <span className="badge-urgent">Overdue</span>}
+                        {booking.special_request && (
+                          <span title={booking.special_request} className="badge-paid cursor-help hidden sm:inline-flex">
+                            Special req
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 flex-wrap">
+                        <span className="font-mono-data">{booking.booking_reference}</span>
+                        {(booking as ArrivalBooking).room_number && (
+                          <span>Rm {(booking as ArrivalBooking).room_number}</span>
+                        )}
+                        {booking.guest_phone && (
+                          <a href={`tel:${booking.guest_phone}`}
+                            className="flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium">
+                            <PhoneIcon className="h-3 w-3" />
+                            {booking.guest_phone}
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <BookingStatusBadge status={booking.booking_status} />
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0 pl-5 sm:pl-0">
+                    <BookingStatusBadge status={booking.booking_status} />
                     <Link href={`/dashboard/bookings/${booking.id}`} className="btn-ghost text-xs">
                       Details
                     </Link>
@@ -203,12 +204,12 @@ export default function ArrivalsPage() {
                         {isActing ? (
                           <span className="flex items-center gap-1.5">
                             <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                            Checking in…
+                            <span className="hidden sm:inline">Checking in…</span>
                           </span>
                         ) : (
                           <span className="flex items-center gap-1.5">
                             <CheckIcon className="h-3.5 w-3.5" />
-                            Check in
+                            <span className="hidden sm:inline">Check in</span>
                           </span>
                         )}
                       </button>
@@ -216,7 +217,7 @@ export default function ArrivalsPage() {
                     {booking.booking_status === 'reserved_unpaid' && (
                       <Link href={`/dashboard/bookings/${booking.id}?action=cash`}
                         className="btn-secondary text-xs border-yellow-300 text-yellow-800 bg-yellow-50 hover:bg-yellow-100">
-                        Collect cash
+                        Collect
                       </Link>
                     )}
                   </div>

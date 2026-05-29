@@ -93,7 +93,7 @@ export default function OccupancyReportPage() {
       </div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="stat-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Current</p>
           <p className="mt-2 text-4xl font-bold text-gray-900">{occupancyPct}%</p>
@@ -137,10 +137,10 @@ export default function OccupancyReportPage() {
       </div>
 
       {/* Day range selector */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {DAY_OPTIONS.map((d) => (
           <button key={d} onClick={() => setDays(d)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors
+            className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-colors
               ${days === d ? 'bg-brand-500 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
             {d}d
           </button>
@@ -214,28 +214,28 @@ export default function OccupancyReportPage() {
 
       {/* Daily breakdown table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50">
           <h3 className="text-sm font-semibold text-gray-700">Daily Breakdown</h3>
         </div>
         <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto scrollbar-thin">
           {stats.data.map((day) => (
-            <div key={day.date} className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition-colors">
-              <div className="w-28 flex-shrink-0">
-                <p className="text-sm font-semibold text-gray-900">{day.date}</p>
+            <div key={day.date} className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 hover:bg-gray-50 transition-colors">
+              <div className="w-24 sm:w-28 flex-shrink-0">
+                <p className="text-xs sm:text-sm font-semibold text-gray-900">{day.date}</p>
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-brand-500 rounded-full transition-all"
                       style={{ width: `${Math.round(day.rate * 100)}%` }} />
                   </div>
-                  <span className="text-sm font-bold text-gray-900 w-10 text-right">
+                  <span className="text-xs sm:text-sm font-bold text-gray-900 w-9 sm:w-10 text-right">
                     {Math.round(day.rate * 100)}%
                   </span>
                 </div>
               </div>
-              <div className="text-xs text-gray-500 w-24 text-right flex-shrink-0">
-                {day.occupied}/{day.total_rooms} rooms
+              <div className="text-xs text-gray-500 w-20 sm:w-24 text-right flex-shrink-0">
+                {day.occupied}/{day.total_rooms}
               </div>
             </div>
           ))}

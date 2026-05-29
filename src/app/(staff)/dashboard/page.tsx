@@ -109,12 +109,12 @@ export default function DashboardHomePage() {
   const dateStr = now.toLocaleDateString('en-ET', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
-    <div className="max-w-7xl space-y-8">
+    <div className="max-w-7xl space-y-6 sm:space-y-8">
 
       {/* Header */}
-      <div className="flex items-end justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{greeting}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{greeting}</h1>
           <p className="mt-0.5 text-sm text-gray-500">{dateStr}</p>
         </div>
         {unreadCount > 0 && (
@@ -127,7 +127,7 @@ export default function DashboardHomePage() {
       </div>
 
       {/* KPI row — Req 33.2 */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <KpiCard label="Arrivals today"    value={counts.arrivals}    href="/dashboard/arrivals"    accent loading={counts.loading} sub="Expected check-ins" />
         <KpiCard label="Departures today"  value={counts.departures}  href="/dashboard/departures"  loading={counts.loading} sub="Expected check-outs" />
         <KpiCard label="Available rooms"   value={counts.available}   href="/dashboard/rooms"       loading={counts.loading} sub="Ready for guests" />
@@ -143,7 +143,7 @@ export default function DashboardHomePage() {
       </div>
 
       {/* Body: quick actions + shift notes + recent notifications */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
 
         {/* Quick actions — Req 33.6 */}
         <div className="space-y-3">

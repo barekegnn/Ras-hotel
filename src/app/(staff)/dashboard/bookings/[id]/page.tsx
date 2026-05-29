@@ -211,13 +211,13 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
     <div className="max-w-4xl space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
           <Link href="/dashboard/bookings" className="btn-ghost text-gray-500">
             <ArrowLeftIcon className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               {booking.booking_reference}
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">{booking.guest_name}</p>
@@ -236,7 +236,7 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
         </button>
 
         {expanding.actions && (
-          <div className="border-t border-gray-200 grid grid-cols-2 gap-3 p-4">
+          <div className="border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
             {/* Check-in */}
             {isPaid && (
               <button
@@ -340,8 +340,8 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
         </button>
 
         {expanding.guest && (
-          <div className="border-t border-gray-200 p-5 space-y-4">
-            <div className="grid grid-cols-2 gap-6">
+          <div className="border-t border-gray-200 p-4 sm:p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {[
                 { label: 'Full name', value: booking.guest_name },
                 { label: 'Age', value: booking.guest_age },
@@ -373,7 +373,7 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
       </div>
 
       {/* Booking details */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         {[
           { label: 'Check-in', value: booking.check_in_date },
           { label: 'Check-out', value: booking.check_out_date },

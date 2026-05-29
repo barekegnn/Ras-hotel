@@ -57,16 +57,16 @@ export function RoomStatusGrid() {
     <div className="space-y-6">
 
       {/* Summary counts */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {ALL_STATUSES.map((status) => {
           const colors = STATUS_COLORS[status]!;
           return (
             <button key={status}
               onClick={() => setFilter(filter === status ? 'all' : status)}
-              className={`relative rounded-lg border-2 transition-all p-4 text-left hover:scale-[1.02]
+              className={`relative rounded-lg border-2 transition-all p-3 sm:p-4 text-left hover:scale-[1.02]
                 ${filter === status ? colors.border : 'border-gray-200'} ${colors.bg}`}>
-              <div className={`text-sm font-medium ${colors.text}`}>{STATUS_LABELS[status]}</div>
-              <div className="mt-1 text-2xl font-bold text-gray-900">{counts[status] ?? 0}</div>
+              <div className={`text-xs sm:text-sm font-medium ${colors.text}`}>{STATUS_LABELS[status]}</div>
+              <div className="mt-1 text-xl sm:text-2xl font-bold text-gray-900">{counts[status] ?? 0}</div>
             </button>
           );
         })}
@@ -74,26 +74,26 @@ export function RoomStatusGrid() {
 
       {/* Room grid */}
       {loading ? (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {Array.from({ length: 12 }).map((_, i) => (
             <div key={i} className="h-24 animate-pulse rounded-lg bg-gray-100" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {filtered.map((room) => {
             const colors = STATUS_COLORS[room.room_status] ?? STATUS_COLORS.available!;
             return (
               <button key={room.id}
                 onClick={() => setSelectedRoom(room)}
-                className={`group relative rounded-lg border-2 p-4 text-left transition-all
+                className={`group relative rounded-lg border-2 p-3 sm:p-4 text-left transition-all
                   hover:scale-[1.03] hover:shadow-md ${colors.bg} ${colors.border}`}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-xl font-bold text-gray-900">{room.room_number}</div>
+                    <div className="text-lg sm:text-xl font-bold text-gray-900">{room.room_number}</div>
                     <div className="mt-0.5 text-xs font-medium text-gray-600">{room.room_type}</div>
                   </div>
-                  <div className={`rounded px-2 py-0.5 text-xs font-semibold ${colors.text} bg-white/80`}>
+                  <div className={`rounded px-1.5 py-0.5 text-[10px] sm:text-xs font-semibold ${colors.text} bg-white/80`}>
                     {STATUS_LABELS[room.room_status] ?? room.room_status}
                   </div>
                 </div>

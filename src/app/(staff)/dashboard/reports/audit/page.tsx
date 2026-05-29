@@ -79,7 +79,7 @@ export default function AuditLogPage() {
       {/* Filter */}
       <div className="flex gap-3">
         <select value={filter} onChange={(e) => setFilter(e.target.value)}
-          className="field-input text-sm w-64">
+          className="field-input text-sm w-full sm:w-64">
           <option value="">All actions</option>
           <option value="booking_created">Booking created</option>
           <option value="booking_modified">Booking modified</option>
@@ -122,8 +122,8 @@ export default function AuditLogPage() {
                 hour: '2-digit', minute: '2-digit',
               });
               return (
-                <div key={entry.id} className="flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex-shrink-0 w-36 text-xs text-gray-400 font-mono pt-0.5">{time}</div>
+                <div key={entry.id} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="text-xs text-gray-400 font-mono flex-shrink-0 sm:w-32 sm:pt-0.5">{time}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color}`}>

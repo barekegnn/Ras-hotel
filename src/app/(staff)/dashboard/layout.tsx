@@ -26,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <DashboardTopBar staffName={staff.full_name} role={staff.role} />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-thin">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-thin pb-safe">
           {children}
         </main>
       </div>

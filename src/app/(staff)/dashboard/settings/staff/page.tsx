@@ -103,9 +103,9 @@ export default function StaffSettingsPage() {
           {staff.length === 0 ? (
             <div className="p-8 text-center text-sm text-gray-400">No staff accounts yet</div>
           ) : staff.map((s) => (
-            <div key={s.id} className="flex items-center justify-between px-5 py-4">
+            <div key={s.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-4">
               <div className="flex items-center gap-4">
-                <div className="h-9 w-9 rounded-full bg-brand-100 flex items-center justify-center text-sm font-bold text-brand-700">
+                <div className="h-9 w-9 rounded-full bg-brand-100 flex items-center justify-center text-sm font-bold text-brand-700 flex-shrink-0">
                   {s.full_name.charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -113,7 +113,7 @@ export default function StaffSettingsPage() {
                   <p className="text-xs text-gray-500">@{s.username} · {s.role}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 pl-13 sm:pl-0">
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
                   ${s.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
                   {s.is_active ? 'Active' : 'Inactive'}

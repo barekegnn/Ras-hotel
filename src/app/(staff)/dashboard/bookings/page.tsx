@@ -161,8 +161,8 @@ function BookingsList() {
 
       {/* Filter panel */}
       {showFilter && (
-        <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Status filter */}
             <div>
               <label className="field-label">Booking status</label>
@@ -258,10 +258,10 @@ function BookingsList() {
           <div className="divide-y divide-gray-100">
             {bookings.map((booking) => (
               <Link key={booking.id} href={`/dashboard/bookings/${booking.id}`}
-                className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group">
+                className="flex items-center gap-3 px-4 sm:px-5 py-3.5 sm:py-4 hover:bg-gray-50 transition-colors group">
 
                 {/* Status indicator */}
-                <div className={`h-3 w-3 flex-shrink-0 rounded-full
+                <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full
                   ${booking.booking_status === 'paid'            ? 'bg-blue-500' :
                     booking.booking_status === 'reserved_unpaid' ? 'bg-yellow-500' :
                     booking.booking_status === 'checked_in'      ? 'bg-green-500' :
@@ -271,26 +271,31 @@ function BookingsList() {
 
                 {/* Booking info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono-data text-sm font-semibold text-gray-900">
                       {booking.booking_reference}
                     </span>
                     <span className="text-sm text-gray-600 truncate">{booking.guest_name}</span>
                   </div>
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
-                    <span>{booking.check_in_date} to {booking.check_out_date}</span>
-                    {booking.special_request && <span className="badge-paid">Special request</span>}
+                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 flex-wrap">
+                    <span>{booking.check_in_date} → {booking.check_out_date}</span>
+                    {booking.special_request && <span className="badge-paid">Special req</span>}
+                  </div>
+                  {/* Amount shown inline on mobile */}
+                  <div className="flex items-center gap-2 mt-1 sm:hidden">
+                    <span className="text-xs font-semibold text-gray-700">ETB {booking.total_amount?.toFixed(2)}</span>
+                    <BookingStatusBadge status={booking.booking_status as any} />
                   </div>
                 </div>
 
-                {/* Amount */}
-                <div className="text-right flex-shrink-0">
-                  <p className="font-semibold text-gray-900">ETB {booking.total_amount?.toFixed(2)}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{booking.payment_method}</p>
+                {/* Amount + status — hidden on mobile (shown inline above) */}
+                <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900 text-sm">ETB {booking.total_amount?.toFixed(2)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{booking.payment_method}</p>
+                  </div>
+                  <BookingStatusBadge status={booking.booking_status as any} />
                 </div>
-
-                {/* Status badge */}
-                <BookingStatusBadge status={booking.booking_status as any} />
 
                 {/* Chevron */}
                 <ChevronRightIcon className="h-4 w-4 text-gray-300 group-hover:text-gray-400 flex-shrink-0" />

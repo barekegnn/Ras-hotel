@@ -109,7 +109,7 @@ export default function RevenueAnalyticsPage() {
         </div>
 
         {/* Controls */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3">
           {/* Preset buttons */}
           <div className="flex gap-1.5 rounded-lg border border-gray-200 bg-white p-1">
             {PRESET_RANGES.map(({ label, days }) => (
@@ -124,7 +124,7 @@ export default function RevenueAnalyticsPage() {
           </div>
 
           {/* Custom date range */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <input type="date" value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="field-input text-xs py-1.5 w-36" />

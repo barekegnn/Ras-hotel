@@ -249,7 +249,7 @@ export default function NewBookingPage() {
                 <h2 className="text-sm font-semibold text-gray-700">Select dates</h2>
               </div>
               <div className="p-5 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="field-label">Check-in date</label>
                     <input type="date" min={today} value={checkIn}
@@ -290,7 +290,7 @@ export default function NewBookingPage() {
                       No rooms available for these dates.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {rooms.map((r) => (
                         <button key={r.id} type="button"
                           disabled={!r.is_available}
@@ -368,7 +368,7 @@ export default function NewBookingPage() {
                   {errors.guest_name && <p className="field-error">{errors.guest_name}</p>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="field-label">Age <span className="text-red-400">*</span></label>
                     <input type="number" min="1" max="120" value={guestAge}
@@ -391,7 +391,7 @@ export default function NewBookingPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="field-label">Phone number <span className="text-red-400">*</span></label>
                     <input type="tel" value={guestPhone}
@@ -441,7 +441,7 @@ export default function NewBookingPage() {
                 <h2 className="text-sm font-semibold text-gray-700">Booking summary</h2>
               </div>
               <div className="p-5 space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   {[
                     { label: 'Guest',     value: guestName },
                     { label: 'Phone',     value: guestPhone },
@@ -470,7 +470,7 @@ export default function NewBookingPage() {
               <div className="border-b border-gray-100 bg-gray-50 px-5 py-3.5">
                 <h2 className="text-sm font-semibold text-gray-700">Payment method</h2>
               </div>
-              <div className="p-5 grid grid-cols-2 gap-3">
+              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {PAYMENT_METHODS.map(({ value, label, icon, desc }) => (
                   <label key={value}
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-all
@@ -495,7 +495,7 @@ export default function NewBookingPage() {
               <div className="border-b border-gray-100 bg-gray-50 px-5 py-3.5">
                 <h2 className="text-sm font-semibold text-gray-700">Payment status</h2>
               </div>
-              <div className="p-5 grid grid-cols-2 gap-3">
+              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {PAYMENT_STATUS_OPTIONS.map(({ value, label, desc }) => (
                   <label key={value}
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-all

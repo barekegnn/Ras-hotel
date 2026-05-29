@@ -133,7 +133,7 @@ export default function GuestProfilePage({ params }: { params: { phone: string }
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {[
           { label: 'Total bookings', value: profile.total_bookings },
           { label: 'Completed stays', value: profile.total_stays },
@@ -156,14 +156,14 @@ export default function GuestProfilePage({ params }: { params: { phone: string }
         ) : (
           <div className="divide-y divide-gray-100">
             {profile.bookings.map((b) => (
-              <div key={b.id} className="flex items-center justify-between px-5 py-4">
+              <div key={b.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-4">
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{b.booking_reference}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {b.room_number} ({b.room_type}) · {b.check_in_date} → {b.check_out_date}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-sm font-semibold text-gray-700">ETB {b.total_amount?.toFixed(2)}</span>
                   <BookingStatusBadge status={b.booking_status as any} />
                   <Link href={`/dashboard/bookings/${b.id}`}

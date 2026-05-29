@@ -92,14 +92,14 @@ export default function DeparturesPage() {
       )}
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <div className="stat-card">
           <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Checked in (due out)</div>
-          <div className="mt-2 text-4xl font-bold text-gray-900">{loading ? '–' : checkedIn}</div>
+          <div className="mt-2 text-3xl sm:text-4xl font-bold text-gray-900">{loading ? '–' : checkedIn}</div>
         </div>
         <div className="stat-card">
-          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Expected (not yet checked in)</div>
-          <div className="mt-2 text-4xl font-bold text-gray-900">{loading ? '–' : expected}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Expected (not checked in)</div>
+          <div className="mt-2 text-3xl sm:text-4xl font-bold text-gray-900">{loading ? '–' : expected}</div>
         </div>
       </div>
 
@@ -122,23 +122,23 @@ export default function DeparturesPage() {
               const isActing    = actingOn === booking.id;
               return (
                 <div key={booking.id}
-                  className={`flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors
+                  className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 hover:bg-gray-50 transition-colors
                     ${isCheckedIn ? '' : 'bg-gray-50/50 opacity-70'}`}>
 
-                  <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full
-                    ${isCheckedIn ? 'bg-green-500' : 'bg-gray-300'}`} />
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{booking.guest_name}</p>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
-                      <span className="font-mono-data">{booking.booking_reference}</span>
-                      <span>Check-out: {booking.check_out_date}</span>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full
+                      ${isCheckedIn ? 'bg-green-500' : 'bg-gray-300'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">{booking.guest_name}</p>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 flex-wrap">
+                        <span className="font-mono-data">{booking.booking_reference}</span>
+                        <span>Out: {booking.check_out_date}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <BookingStatusBadge status={booking.booking_status} />
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0 pl-5 sm:pl-0">
+                    <BookingStatusBadge status={booking.booking_status} />
                     <Link href={`/dashboard/bookings/${booking.id}`} className="btn-ghost text-xs">
                       Details
                     </Link>
@@ -148,12 +148,12 @@ export default function DeparturesPage() {
                         {isActing ? (
                           <span className="flex items-center gap-1.5">
                             <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                            Checking out…
+                            <span className="hidden sm:inline">Checking out…</span>
                           </span>
                         ) : (
                           <span className="flex items-center gap-1.5">
                             <CheckIcon className="h-3.5 w-3.5" />
-                            Check out
+                            <span className="hidden sm:inline">Check out</span>
                           </span>
                         )}
                       </button>
