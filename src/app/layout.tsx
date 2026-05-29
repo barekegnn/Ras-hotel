@@ -66,6 +66,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning
       className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${playfairDisplay.variable} ${sourceSerif4.variable}`}>
+      <head>
+        {/* Unregister stale service workers from old next-pwa@5 before new SW registers */}
+        <script src="/sw-cleanup.js" async />
+      </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
       </body>
