@@ -6,7 +6,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/modules/auth/domain/session';
+import { requireAuth, getCurrentStaffAccount } from '@/modules/auth/domain/session';
 import { createSupabaseServiceClient } from '@/modules/auth/infrastructure/supabase';
 import { writeAuditLog } from '@/modules/audit/domain/logger';
 import { AuditActionType, EntityType } from '@/shared/types/domain';
@@ -40,6 +40,16 @@ export async function GET(_req: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireAuth('manager');
   if (auth.error) return auth.error;
+
+  // Fetch the staff_accounts row so we have the integer PK required by the FK
+  const staffAccount = await getCurrentStaffAccount();
+  if (!staffAccount) {
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: 'Staff account not found' } },
+      { status: 401 }
+    );
+  }
+  const staffId = staffAccount.id; // integer PK that documents.uploaded_by references
 
   try {
     const formData = await request.formData();
@@ -114,7 +124,7 @@ export async function POST(request: NextRequest) {
           mime_type:       file.type,
           file_size_bytes: file.size,
           index_status:    'pending',
-          uploaded_by:     auth.user!.id,
+          uploaded_by:     staffId,
           uploaded_at:     new Date().toISOString(),
         })
         .eq('id', existing.id)
@@ -132,7 +142,7 @@ export async function POST(request: NextRequest) {
           mime_type:       file.type,
           file_size_bytes: file.size,
           index_status:    'pending',
-          uploaded_by:     auth.user!.id,
+          uploaded_by:     staffId,
         })
         .select('id')
         .single();
